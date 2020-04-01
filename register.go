@@ -3,10 +3,10 @@ package main
 import (
 	"github.com/superloach/minori"
 
-	"github.com/superloach/snart/bot"
-	"github.com/superloach/snart/errs"
-	"github.com/superloach/snart/plugin"
-	"github.com/superloach/snart/route"
+	"github.com/go-snart/snart/bot"
+	"github.com/go-snart/snart/errs"
+	"github.com/go-snart/snart/plugin"
+	"github.com/go-snart/snart/route"
 )
 
 var Log *minori.Logger

@@ -8,6 +8,8 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
+github.com/go-snart/snart v0.0.0-20200401205223-8db080e490de h1:kQ2K0tOYvmljhFqySxrukdgqA6I+nfxdFWLd6Oz/k8o=
+github.com/go-snart/snart v0.0.0-20200401205223-8db080e490de/go.mod h1:Aj7LBNxGAGPOxq27cZY/1N3TQetAqPw4Nc3bZs3t/+w=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.4 h1:87PNWwrRvUSnqS4dlcBU/ftvOIBep4sYuBLlh6rX2wk=
 github.com/golang/protobuf v1.3.4/go.mod h1:vzj43D7+SQXF/4pzW/hwtAqwc6iTitCiVSaWz5lYuqw=
@@ -33,7 +35,6 @@ github.com/opentracing/opentracing-go v1.1.0 h1:pWlfV3Bxv7k65HYwkikxat0+s3pV4bsq
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/paul-mannino/go-fuzzywuzzy v0.0.0-20200127021948-54652b135d0e h1:UMX/0xkc/jcivgGjoBumSA1YwxT3eq6rYeWOOEuPU38=
 github.com/paul-mannino/go-fuzzywuzzy v0.0.0-20200127021948-54652b135d0e/go.mod h1:AMWhKRluACdXhJMWJiVOuqwmZvJOcdmjgbla/9zOKzE=
-github.com/pbnjay/memory v0.0.0-20190104145345-974d429e7ae4/go.mod h1:RMU2gJXhratVxBDTFeOdNhd540tG57lt9FIUV0YLvIQ=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sirupsen/logrus v1.0.6 h1:hcP1GmhGigz/O7h1WVUM5KklBp1JoNS9FggWKdj/j3s=
 github.com/sirupsen/logrus v1.0.6/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
@@ -44,8 +45,6 @@ github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81P
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/superloach/minori v0.0.0-20200401022729-31f6f02808bc h1:ZcXk0X/7Hro//sc+qQEdIGtUu+loHYZa9sGSseAXp7c=
 github.com/superloach/minori v0.0.0-20200401022729-31f6f02808bc/go.mod h1:O48Bj7ZzDMW6lvzGwPhgq7j3fUZJPsdnDZ6UGeRy1Qc=
-github.com/superloach/snart v0.0.0-20200401030415-d23f3dbc6492 h1:cSMKfIMDzDLFcRxKe4L3yckpgijNxmPA3dPJgCKDH7A=
-github.com/superloach/snart v0.0.0-20200401030415-d23f3dbc6492/go.mod h1:2cxZxvy1kVAXOz4WjiTTt97Wt3AjsQl7Gk2UhuXPOfs=
 golang.org/x/crypto v0.0.0-20181030102418-4d3f4d9ffa16/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073 h1:xMPOj6Pz6UipU1wXLkrtqpHbR0AVFnyPEQq/wRWz9lM=

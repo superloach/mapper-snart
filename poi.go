@@ -6,9 +6,9 @@ import (
 	dgw "github.com/Necroforger/dgwidgets"
 	dg "github.com/bwmarrin/discordgo"
 	"github.com/paul-mannino/go-fuzzywuzzy"
-	"github.com/superloach/snart/db"
-	"github.com/superloach/snart/errs"
-	"github.com/superloach/snart/route"
+	"github.com/go-snart/snart/db"
+	"github.com/go-snart/snart/errs"
+	"github.com/go-snart/snart/route"
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
 
