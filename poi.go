@@ -122,7 +122,7 @@ func _poi(d *db.DB, ctx *route.Ctx) error {
 		embed := &dg.MessageEmbed{}
 		embed.Title = sugg.Name
 		embed.URL = MapURL(sugg)
-		embed.Description = sugg.Desc
+		embed.Description = sugg.Notes
 		embed.Thumbnail = &dg.MessageEmbedThumbnail{
 			URL: sugg.Image,
 		}
