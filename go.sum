@@ -43,6 +43,8 @@ github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoH
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
+github.com/superloach/go-intel v0.0.0-20200403145754-29de3bb7be24 h1:LOFQK5yW+E+fwqfasfhD9RAH9By8hNPdzrDBOWC3Ldc=
+github.com/superloach/go-intel v0.0.0-20200403145754-29de3bb7be24/go.mod h1:sJEuRn5WuuCMLpjCmu9jMp7/HOB+mS0cA2izLv14nGc=
 github.com/superloach/minori v0.0.0-20200401022729-31f6f02808bc h1:ZcXk0X/7Hro//sc+qQEdIGtUu+loHYZa9sGSseAXp7c=
 github.com/superloach/minori v0.0.0-20200401022729-31f6f02808bc/go.mod h1:O48Bj7ZzDMW6lvzGwPhgq7j3fUZJPsdnDZ6UGeRy1Qc=
 golang.org/x/crypto v0.0.0-20181030102418-4d3f4d9ffa16/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
