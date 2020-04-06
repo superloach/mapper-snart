@@ -1,14 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	dgw "github.com/Necroforger/dgwidgets"
 	dg "github.com/bwmarrin/discordgo"
-	"github.com/paul-mannino/go-fuzzywuzzy"
 	"github.com/go-snart/snart/lib/db"
 	"github.com/go-snart/snart/lib/errs"
 	"github.com/go-snart/snart/lib/route"
+	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
 
@@ -17,25 +18,13 @@ func scorer(s1, s2 string) int {
 }
 
 func clean(s string) string {
-	return fuzzy.Cleanse(s, false)
+	return fuzzy.Cleanse(s, true)
 }
 
-func Poi(d *db.DB) func(ctx *route.Ctx) error {
-	_f := "Poi"
-	return func(ctx *route.Ctx) error {
-		err := _poi(d, ctx)
-		if err != nil {
-			errs.Wrap(&err, `_poi(d, ctx)`)
-			Log.Error(_f, err)
-			return err
-		}
-
-		return nil
-	}
-}
-
-func _poi(d *db.DB, ctx *route.Ctx) error {
+func Poi(d *db.DB, ctx *route.Ctx) error {
 	_f := "_poi"
+
+	debug := ctx.Flags.Bool("debug", false, "print extra info")
 
 	err := ctx.Flags.Parse()
 	if err != nil {
@@ -102,8 +91,9 @@ func _poi(d *db.DB, ctx *route.Ctx) error {
 	}
 
 	suggs := make([]*POI, 0)
-	for _, poi := range pois {
-		for _, sug := range suggNames {
+	for _, sug := range suggNames {
+		Log.Debugf(_f, "%#v\n", sug)
+		for _, poi := range pois {
 			if sug.Match == poi.Name {
 				suggs = append(suggs, poi)
 			}
@@ -118,13 +108,36 @@ func _poi(d *db.DB, ctx *route.Ctx) error {
 	}
 
 	pg := dgw.NewPaginator(ctx.Session, ctx.Message.ChannelID)
-	for _, sugg := range suggs {
+	for i, sugg := range suggs {
+		Log.Debugf(_f, "%#v\n", sugg)
 		embed := &dg.MessageEmbed{}
 		embed.Title = sugg.Name
-		embed.URL = MapURL(sugg)
-		embed.Description = sugg.Notes
+		embed.URL = sugg.MapURL()
+		embed.Description = fmt.Sprintf(
+			"\u2022 [Directions](%s)%s",
+			sugg.DirectionsURL(),
+			func(n string) string {
+				if n == "" {
+					return ""
+				}
+				return "\n\u2022 Notes: `" + n + "`"
+			}(sugg.Notes),
+		)
 		embed.Thumbnail = &dg.MessageEmbedThumbnail{
 			URL: sugg.Image,
+		}
+		embed.Footer = &dg.MessageEmbedFooter{
+			Text: fmt.Sprintf(
+				"%d/%d%s",
+				i+1,
+				len(suggs),
+				func(i string) string {
+					if *debug {
+						return " (" + sugg.ID + ")"
+					}
+					return ""
+				}(sugg.ID),
+			),
 		}
 		pg.Add(embed)
 	}

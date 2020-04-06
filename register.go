@@ -37,7 +37,16 @@ func routes(name string, b *bot.Bot) error {
 	_f := "routes"
 	Log.Info(_f, "registering routes")
 
-	poi := Poi(b.DB)
+	poi := func(ctx *route.Ctx) error {
+		err := Poi(b.DB, ctx)
+		if err != nil {
+			errs.Wrap(&err, `_poi(d, ctx)`)
+			Log.Error(_f, err)
+			return err
+		}
+
+		return nil
+	}
 
 	b.AddRoute(
 		&route.Route{
