@@ -112,40 +112,29 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 		Log.Debugf(_f, "%#v\n", sugg)
 
 		desc := []string{}
-		desc = append(desc, "[Directions](" + sugg.DirectionsURL() + ")")
 		if sugg.Notes != "" {
-			desc = append(desc, "Notes: `" + sugg.Notes + "`")
+			desc = append(desc, "Notes: `"+sugg.Notes+"`")
 		}
 		if sugg.Alias != nil && len(sugg.Alias) > 0 {
 			alias := strings.Join(sugg.Alias, "`, `")
-			desc = append(desc, "Aliases: `" + alias + "`")
+			desc = append(desc, "Aliases: `"+alias+"`")
 		}
 		if *debug {
-			desc = append(desc, "ID: `" + sugg.ID + "`")
-			desc = append(desc, "Ingress: `" + sugg.Ingr + "`")
-			desc = append(desc, "Pokémon: `" + sugg.Pkmn + "`")
-			desc = append(desc, "Wizards: `" + sugg.Wzrd + "`")
+			desc = append(desc, "ID: `"+sugg.ID+"`")
+			desc = append(desc, "Ingress: `"+sugg.Ingr+"`")
+			desc = append(desc, "Pokemon: `"+sugg.Pkmn+"`")
+			desc = append(desc, "Wizards: `"+sugg.Wzrd+"`")
 		}
 
 		embed := &dg.MessageEmbed{}
 		embed.Title = sugg.Name
-		embed.URL = sugg.MapURL()
+		embed.URL = sugg.URL()
 		embed.Description = strings.Join(desc, "\n")
 		embed.Thumbnail = &dg.MessageEmbedThumbnail{
 			URL: sugg.Image,
 		}
 		embed.Footer = &dg.MessageEmbedFooter{
-			Text: fmt.Sprintf(
-				"%d/%d%s",
-				i+1,
-				len(suggs),
-				func(i string) string {
-					if *debug {
-						return " (" + sugg.ID + ")"
-					}
-					return ""
-				}(sugg.ID),
-			),
+			Text: fmt.Sprintf("%d/%d", i+1, len(suggs)),
 		}
 		pg.Add(embed)
 	}
