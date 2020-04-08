@@ -49,10 +49,29 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 		return nil
 	}
 
+	err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
+	if err != nil {
+		errs.Wrap(&err, `ctx.Session.ChannelTyping(ctx.Message.ChannelID)`)
+		Log.Error(_f, err)
+		return err
+	}
+
 	query := strings.Join(args, " ")
 
-	pois := make([]*POI, 0)
 	q := r.DB("poi").Table("poi")
+	switch ctx.Route.Name {
+	case "gyms":
+		q = q.Filter(map[string]interface{}{
+			"pkmn": "G",
+		})
+	case "stops":
+		q = q.Filter(map[string]interface{}{
+			"pkmn": "S",
+		})
+	default:
+	}
+
+	pois := make([]*POI, 0)
 	err = q.ReadAll(&pois, d)
 	if err != nil {
 		errs.Wrap(&err, `q.ReadAll(&pois, d)`)
@@ -70,9 +89,9 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 		}
 	}
 
-	suggNames, err := fuzzy.Extract(query, choices, 12, clean, scorer, 50)
+	suggNames, err := fuzzy.Extract(query, choices, 20, clean, scorer, 0)
 	if err != nil {
-		errs.Wrap(&err, `fuzzy.Extract(%#v, choices, 12, clean, scorer, 50)`, query)
+		errs.Wrap(&err, `fuzzy.Extract(%#v, choices, 20, clean, scorer, 0)`, query)
 		Log.Error(_f, err)
 		return err
 	}
@@ -121,9 +140,15 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 		}
 		if *debug {
 			desc = append(desc, "ID: `"+sugg.ID+"`")
-			desc = append(desc, "Ingress: `"+sugg.Ingr+"`")
-			desc = append(desc, "Pokemon: `"+sugg.Pkmn+"`")
-			desc = append(desc, "Wizards: `"+sugg.Wzrd+"`")
+			if sugg.Ingr != "" {
+				desc = append(desc, "Ingress: `"+sugg.Ingr+"`")
+			}
+			if sugg.Pkmn != "" {
+				desc = append(desc, "Pokemon: `"+sugg.Pkmn+"`")
+			}
+			if sugg.Wzrd != "" {
+				desc = append(desc, "Wizards: `"+sugg.Wzrd+"`")
+			}
 		}
 
 		embed := &dg.MessageEmbed{}
