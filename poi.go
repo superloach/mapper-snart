@@ -117,7 +117,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 			desc = append(desc, "Notes: `" + sugg.Notes + "`")
 		}
 		if sugg.Alias != nil && len(sugg.Alias) > 0 {
-			alias := strings.Join("`, `", sugg.Alias)
+			alias := strings.Join(sugg.Alias, "`, `")
 			desc = append(desc, "Aliases: `" + alias + "`")
 		}
 		if *debug {
@@ -130,7 +130,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 		embed := &dg.MessageEmbed{}
 		embed.Title = sugg.Name
 		embed.URL = sugg.MapURL()
-		embed.Description = strings.Join("\n", desc)
+		embed.Description = strings.Join(desc, "\n")
 		embed.Thumbnail = &dg.MessageEmbedThumbnail{
 			URL: sugg.Image,
 		}
