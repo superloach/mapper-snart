@@ -1,15 +1,17 @@
 package main
 
-func (p *POI) MapURL() string {
-	_f := "(*POI).MapURL"
+import "fmt"
 
-	Log.Warn(_f, "placeholder map url")
-	return "https://google.com/"
+func (p *POI) MapURL() string {
+	return fmt.Sprintf(
+		"https://www.google.com/maps/place/%.06f,%.06f",
+		p.Lat, p.Lng,
+	)
 }
 
 func (p *POI) DirectionsURL() string {
-	_f := "(*POI).DirectionsURL"
-
-	Log.Warn(_f, "placeholder directions url")
-	return "https://google.com/"
+	return fmt.Sprintf(
+		"https://www.google.com/maps/dir//%.06f,%.06f",
+		p.Lat, p.Lng,
+	)
 }
