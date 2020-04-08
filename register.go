@@ -51,8 +51,8 @@ func routes(name string, b *bot.Bot) error {
 	b.AddRoute(
 		&route.Route{
 			Name:  "pois",
-			Match: "pois?",
-			Desc:  "Search for any POIs. (Alias: `poi`)",
+			Match: "p(ois?)?",
+			Desc:  "Search for any POIs. (Alias: `poi`, `p`)",
 			Cat:   name,
 			Okay:  nil,
 			Func:  poi,

@@ -110,19 +110,27 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 	pg := dgw.NewPaginator(ctx.Session, ctx.Message.ChannelID)
 	for i, sugg := range suggs {
 		Log.Debugf(_f, "%#v\n", sugg)
+
+		desc := []string{}
+		desc = append(desc, "[Directions](" + sugg.DirectionsURL() + ")")
+		if sugg.Notes != "" {
+			desc = append(desc, "Notes: `" + sugg.Notes + "`")
+		}
+		if sugg.Alias != nil && len(sugg.Alias) > 0 {
+			alias := strings.Join("`, `", sugg.Alias)
+			desc = append(desc, "Aliases: `" + alias + "`")
+		}
+		if *debug {
+			desc = append(desc, "ID: `" + sugg.ID + "`")
+			desc = append(desc, "Ingress: `" + sugg.Ingr + "`")
+			desc = append(desc, "Pokémon: `" + sugg.Pkmn + "`")
+			desc = append(desc, "Wizards: `" + sugg.Wzrd + "`")
+		}
+
 		embed := &dg.MessageEmbed{}
 		embed.Title = sugg.Name
 		embed.URL = sugg.MapURL()
-		embed.Description = fmt.Sprintf(
-			"\u2022 [Directions](%s)%s",
-			sugg.DirectionsURL(),
-			func(n string) string {
-				if n == "" {
-					return ""
-				}
-				return "\n\u2022 Notes: `" + n + "`"
-			}(sugg.Notes),
-		)
+		embed.Description = strings.Join("\n", desc)
 		embed.Thumbnail = &dg.MessageEmbedThumbnail{
 			URL: sugg.Image,
 		}
