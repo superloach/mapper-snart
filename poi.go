@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	dgw "github.com/Necroforger/dgwidgets"
 	dg "github.com/bwmarrin/discordgo"
-	"github.com/go-snart/snart/lib/db"
-	"github.com/go-snart/snart/lib/errs"
-	"github.com/go-snart/snart/lib/route"
+	"github.com/go-snart/db"
+	"github.com/go-snart/route"
 	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
@@ -28,7 +26,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 
 	err := ctx.Flags.Parse()
 	if err != nil {
-		errs.Wrap(&err, `ctx.Flags.Parse()`)
+		err = fmt.Errorf("flag parse: %w", err)
 		Log.Error(_f, err)
 		return err
 	}
@@ -41,7 +39,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 
 		_, err = rep1.Send()
 		if err != nil {
-			errs.Wrap(&err, `rep1.Send()`)
+			err = fmt.Errorf("rep1 send: %w", err)
 			Log.Error(_f, err)
 			return err
 		}
@@ -51,7 +49,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 
 	err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 	if err != nil {
-		errs.Wrap(&err, `ctx.Session.ChannelTyping(ctx.Message.ChannelID)`)
+		err = fmt.Errorf("typing %#v: %w", ctx.Message.ChannelID, err)
 		Log.Error(_f, err)
 		return err
 	}
@@ -74,7 +72,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 	pois := make([]*POI, 0)
 	err = q.ReadAll(&pois, d)
 	if err != nil {
-		errs.Wrap(&err, `q.ReadAll(&pois, d)`)
+		err = fmt.Errorf("readall &pois: %w", err)
 		Log.Error(_f, err)
 		return err
 	}
@@ -91,7 +89,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 
 	suggNames, err := fuzzy.Extract(query, choices, 20, clean, scorer, 0)
 	if err != nil {
-		errs.Wrap(&err, `fuzzy.Extract(%#v, choices, 20, clean, scorer, 0)`, query)
+		err = fmt.Errorf("fuzzy %#v: %w", query, err)
 		Log.Error(_f, err)
 		return err
 	}
@@ -101,7 +99,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 
 		_, err = rep2.Send()
 		if err != nil {
-			errs.Wrap(&err, `rep2.Send()`)
+			err = fmt.Errorf("rep2 send: %w", err)
 			Log.Error(_f, err)
 			return err
 		}
@@ -126,7 +124,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 		}
 	}
 
-	pg := dgw.NewPaginator(ctx.Session, ctx.Message.ChannelID)
+	pg := NewPager(ctx.Session, ctx.Message.ChannelID, ctx.Message.Author.ID)
 	for i, sugg := range suggs {
 		Log.Debugf(_f, "%#v\n", sugg)
 
@@ -166,7 +164,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 
 	err = pg.Spawn()
 	if err != nil {
-		errs.Wrap(&err, `pg.Spawn()`)
+		err = fmt.Errorf("pg spawn: %w", err)
 		Log.Error(_f, err)
 		return err
 	}
