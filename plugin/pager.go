@@ -80,6 +80,7 @@ func (p *Pager) NextPage(w *dgw.Widget, r *dg.MessageReaction) {
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
 		Log.Error(_f, err)
+		return
 	}
 }
 
@@ -119,13 +120,11 @@ func (p *Pager) Close(w *dgw.Widget, r *dg.MessageReaction) {
 		return
 	}
 
-	if p.Widget.Message != nil {
-		err := p.Ses.MessageReactionsRemoveAll(p.Widget.ChannelID, p.Widget.Message.ID)
-		if err != nil {
-			err = fmt.Errorf("remove reacts %#v %#v: %w", p.Widget.ChannelID, p.Widget.Message.ID, err)
-			Log.Error(_f, err)
-			return
-		}
+	err = p.Ses.MessageReactionsRemoveAll(p.Widget.ChannelID, p.Widget.Message.ID)
+	if err != nil {
+		err = fmt.Errorf("remove reacts %#v %#v: %w", p.Widget.ChannelID, p.Widget.Message.ID, err)
+		Log.Error(_f, err)
+		return
 	}
 }
 

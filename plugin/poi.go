@@ -11,8 +11,29 @@ import (
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
 
+func words(s1, s2 string) int {
+	a := 0
+	s1s := strings.Split(s1, " ")
+	s2s := strings.Split(s2, " ")
+	for _, w1 := range s1s {
+		for _, w2 := range s2s {
+			if w1 == w2 {
+				a++
+				break
+			}
+		}
+	}
+	a *= 100
+	a /= len(s1s)
+	return a
+}
+
 func scorer(s1, s2 string) int {
-	return (fuzzy.PartialRatio(s1, s2) + fuzzy.Ratio(s1, s2)) / 2
+	score := 0
+	score += 3 * fuzzy.PartialRatio(s1, s2)
+	score += 2 * fuzzy.Ratio(s1, s2)
+	score += 1 * words(s1, s2)
+	return score / 6
 }
 
 func clean(s string) string {
@@ -20,7 +41,7 @@ func clean(s string) string {
 }
 
 func Poi(d *db.DB, ctx *route.Ctx) error {
-	_f := "_poi"
+	_f := "Poi"
 
 	debug := ctx.Flags.Bool("debug", false, "print extra info")
 

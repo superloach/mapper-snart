@@ -30,31 +30,42 @@ func register(name string, b *bot.Bot) error {
 	poi := func(ctx *route.Ctx) error {
 		return Poi(b.DB, ctx)
 	}
+	mng := func(ctx *route.Ctx) error {
+		return Manage(b.DB, ctx)
+	}
 
-	b.AddRoute(
+	b.Router.Add(
 		&route.Route{
 			Name:  "pois",
-			Match: "^p(ois?)?$",
-			Desc:  "Search for any POIs. (Alias: `poi`, `p`)",
+			Match: "pois?",
+			Desc:  "Search for any POIs.",
 			Cat:   name,
 			Okay:  nil,
 			Func:  poi,
 		},
 		&route.Route{
 			Name:  "gyms",
-			Match: "^g(yms?)?$",
-			Desc:  "Search for Pokemon Go gyms. (Alias: `gym`, `g`)",
+			Match: "g(yms?)?",
+			Desc:  "Search for Pokemon Go gyms.",
 			Cat:   name,
 			Okay:  nil,
 			Func:  poi,
 		},
 		&route.Route{
 			Name:  "stops",
-			Match: "^s(tops?)?$",
-			Desc:  "Search for Pokemon Go stops. (Alias: `stop`, `s`)",
+			Match: "s(tops?)?",
+			Desc:  "Search for Pokemon Go stops.",
 			Cat:   name,
 			Okay:  nil,
 			Func:  poi,
+		},
+		&route.Route{
+			Name:  "manage",
+			Match: "m(anage|ng)",
+			Desc:  "Manage POIs",
+			Cat:   name,
+			Okay:  route.BotOwner,
+			Func:  mng,
 		},
 	)
 
