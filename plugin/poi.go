@@ -183,12 +183,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 		pg.Add(embed)
 	}
 
-	err = pg.Spawn()
-	if err != nil {
-		err = fmt.Errorf("pg spawn: %w", err)
-		Log.Error(_f, err)
-		return err
-	}
+	go pg.Spawn()
 
 	return nil
 }
