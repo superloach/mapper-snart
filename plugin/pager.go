@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	dgw "github.com/Necroforger/dgwidgets"
 	dg "github.com/bwmarrin/discordgo"
@@ -30,6 +31,7 @@ func NewPager(ses *dg.Session, channelID string, userID string) *Pager {
 
 	w := dgw.NewWidget(ses, channelID, nil)
 	w.UserWhitelist = []string{userID}
+	w.Timeout = time.Minute
 	p.Widget = w
 
 	return p
@@ -126,6 +128,8 @@ func (p *Pager) Close(w *dgw.Widget, r *dg.MessageReaction) {
 		Log.Error(_f, err)
 		return
 	}
+
+	p.Widget.Close <- true
 }
 
 func (p *Pager) Update() error {
