@@ -1,4 +1,4 @@
-FROM snart
+FROM superloach/snart
 
 # download
 RUN go get -d -v -x github.com/superloach/mapper/plugin
