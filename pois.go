@@ -119,7 +119,7 @@ func Poi(d *db.DB, ctx *route.Ctx) error {
 	}
 
 	for _, query := range strings.Split(strings.Join(args, " "), "+") {
-		q := r.DB("poi").Table("poi")
+		q := r.DB("mapper").Table("poi")
 		switch ctx.Route.Name {
 		case "gyms":
 			q = q.Filter(map[string]interface{}{

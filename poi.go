@@ -15,7 +15,7 @@ type POI struct {
 	Alias []string `json:"alias" rethinkdb:"alias"`
 }
 
-var POITable = r.DB("poi").TableCreate(
+var POITable = r.DB("mapper").TableCreate(
 	"poi",
 	r.TableCreateOpts{
 		PrimaryKey: "id",

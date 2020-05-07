@@ -24,7 +24,7 @@ func register(name string, b *bot.Bot) error {
 	_f := "register"
 	Log.Info(_f, "registering routes")
 
-	b.DB.Easy(POIDB)
+	b.DB.Easy(MapperDB)
 	b.DB.Easy(POITable)
 
 	poi := func(ctx *route.Ctx) error {

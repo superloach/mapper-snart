@@ -10,7 +10,7 @@ type Bounds struct {
 	Poly types.Lines `json:"poly" rethinkdb:"poly"`
 }
 
-var BoundsTable = r.DB("poi").TableCreate(
+var BoundsTable = r.DB("mapper").TableCreate(
 	"bounds",
 	r.TableCreateOpts{
 		PrimaryKey: "id",
