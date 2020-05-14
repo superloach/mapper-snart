@@ -1,4 +1,4 @@
-package main
+package mapper
 
 import r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 

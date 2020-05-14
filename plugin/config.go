@@ -1,4 +1,4 @@
-package main
+package mapper
 
 import (
 	"github.com/go-snart/db"

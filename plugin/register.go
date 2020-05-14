@@ -1,4 +1,4 @@
-package main
+package mapper
 
 import (
 	"github.com/superloach/minori"
@@ -7,22 +7,15 @@ import (
 	"github.com/go-snart/route"
 )
 
-var Log *minori.Logger
+var Log = minori.GetLogger("mapper/plugin")
 
-func Register(name string, b *bot.Bot) error {
-	_f := "Register"
-	Log = minori.GetLogger(name)
-
-	Log.Info(_f, "forking registration")
-	go register(name, b)
-	Log.Info(_f, "forked registration")
-
-	return nil
+func init() {
+	bot.Register("mapper", Register)
 }
 
-func register(name string, b *bot.Bot) error {
-	_f := "register"
-	Log.Info(_f, "registering routes")
+func Register(b *bot.Bot) error {
+	_f := "Register"
+	Log.Info(_f, "registering")
 
 	b.DB.Once(MapperDB)
 	b.DB.Once(POITable)
@@ -36,7 +29,7 @@ func register(name string, b *bot.Bot) error {
 			Name:  "pois",
 			Match: "pois?",
 			Desc:  "Search for any POIs.",
-			Cat:   name,
+			Cat:   "mapper",
 			Okay:  nil,
 			Func:  search,
 		},
@@ -44,7 +37,7 @@ func register(name string, b *bot.Bot) error {
 			Name:  "gyms",
 			Match: "g(yms?)?",
 			Desc:  "Search for Pokemon Go gyms.",
-			Cat:   name,
+			Cat:   "mapper",
 			Okay:  nil,
 			Func:  search,
 		},
@@ -52,12 +45,13 @@ func register(name string, b *bot.Bot) error {
 			Name:  "stops",
 			Match: "s(tops?)?",
 			Desc:  "Search for Pokemon Go stops.",
-			Cat:   name,
+			Cat:   "mapper",
 			Okay:  nil,
 			Func:  search,
 		},
 	)
 
-	Log.Info(_f, "registered routes")
+	Log.Info(_f, "registered")
+
 	return nil
 }

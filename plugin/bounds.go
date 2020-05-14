@@ -1,4 +1,4 @@
-package main
+package mapper
 
 import "gopkg.in/rethinkdb/rethinkdb-go.v6/types"
 

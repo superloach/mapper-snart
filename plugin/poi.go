@@ -1,4 +1,4 @@
-package main
+package mapper
 
 type POI struct {
 	ID    string   `json:"id"    rethinkdb:"id"`
