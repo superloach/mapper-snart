@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	dg "github.com/bwmarrin/discordgo"
-	"github.com/go-snart/db"
-	"github.com/go-snart/route"
+	"github.com/go-snart/snart/db"
+	"github.com/go-snart/snart/route"
 	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )

@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"github.com/go-snart/db"
-	"github.com/go-snart/route"
+	"github.com/go-snart/snart/db"
+	"github.com/go-snart/snart/route"
 )
 
 func SetBounds(d *db.DB, ctx *route.Ctx) error {

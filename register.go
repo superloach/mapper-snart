@@ -3,8 +3,8 @@ package mapper
 import (
 	"github.com/superloach/minori"
 
-	"github.com/go-snart/bot"
-	"github.com/go-snart/route"
+	"github.com/go-snart/snart/bot"
+	"github.com/go-snart/snart/route"
 )
 
 var Log = minori.GetLogger("mapper/plugin")

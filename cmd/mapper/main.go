@@ -6,13 +6,13 @@ import (
 	"github.com/namsral/flag"
 	"github.com/superloach/minori"
 
-	"github.com/go-snart/bot"
-	"github.com/go-snart/db"
+	"github.com/go-snart/snart/bot"
+	"github.com/go-snart/snart/db"
 
+	// plugins
 	_ "github.com/go-snart/plugin-admin"
 	_ "github.com/go-snart/plugin-help"
-
-	_ "github.com/superloach/mapper/plugin"
+	_ "github.com/superloach/mapper"
 )
 
 var (
