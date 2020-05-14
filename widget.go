@@ -14,7 +14,7 @@ var (
 	ErrNilMessage       = errors.New("nil message")
 )
 
-type Pager struct {
+type Widget struct {
 	Pages []*dg.MessageEmbed
 	Index int
 
@@ -23,8 +23,8 @@ type Pager struct {
 	Ses *dg.Session
 }
 
-func NewPager(ses *dg.Session, channelID string, userID string) *Pager {
-	p := &Pager{}
+func NewWidget(ses *dg.Session, channelID string, userID string) *Widget {
+	p := &Widget{}
 
 	p.Ses = ses
 	p.Pages = make([]*dg.MessageEmbed, 0)
@@ -37,8 +37,8 @@ func NewPager(ses *dg.Session, channelID string, userID string) *Pager {
 	return p
 }
 
-func (p *Pager) Spawn() error {
-	_f := "(*Pager).Spawn"
+func (p *Widget) Spawn() error {
+	_f := "(*Widget).Spawn"
 
 	defer p.Close(nil, nil)
 
@@ -57,11 +57,11 @@ func (p *Pager) Spawn() error {
 	return p.Widget.Spawn()
 }
 
-func (p *Pager) Add(embeds ...*dg.MessageEmbed) {
+func (p *Widget) Add(embeds ...*dg.MessageEmbed) {
 	p.Pages = append(p.Pages, embeds...)
 }
 
-func (p *Pager) Page() (*dg.MessageEmbed, error) {
+func (p *Widget) Page() (*dg.MessageEmbed, error) {
 	if p.Index < 0 || p.Index >= len(p.Pages) {
 		return nil, ErrIndexOutOfBounds
 	}
@@ -69,8 +69,8 @@ func (p *Pager) Page() (*dg.MessageEmbed, error) {
 	return p.Pages[p.Index], nil
 }
 
-func (p *Pager) NextPage(w *dgw.Widget, r *dg.MessageReaction) {
-	_f := "(*Pager).NextPage"
+func (p *Widget) NextPage(w *dgw.Widget, r *dg.MessageReaction) {
+	_f := "(*Widget).NextPage"
 
 	if p.Index+1 >= 0 && p.Index+1 < len(p.Pages) {
 		p.Index++
@@ -81,13 +81,13 @@ func (p *Pager) NextPage(w *dgw.Widget, r *dg.MessageReaction) {
 	err := p.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
-		Log.Error(_f, err)
+		Log.Warn(_f, err)
 		return
 	}
 }
 
-func (p *Pager) PreviousPage(w *dgw.Widget, r *dg.MessageReaction) {
-	_f := "(*Pager).PreviousPage"
+func (p *Widget) PreviousPage(w *dgw.Widget, r *dg.MessageReaction) {
+	_f := "(*Widget).PreviousPage"
 
 	if p.Index-1 >= 0 && p.Index-1 < len(p.Pages) {
 		p.Index--
@@ -98,18 +98,18 @@ func (p *Pager) PreviousPage(w *dgw.Widget, r *dg.MessageReaction) {
 	err := p.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
-		Log.Error(_f, err)
+		Log.Warn(_f, err)
 		return
 	}
 }
 
-func (p *Pager) Close(w *dgw.Widget, r *dg.MessageReaction) {
-	_f := "(*Pager).Close"
+func (p *Widget) Close(w *dgw.Widget, r *dg.MessageReaction) {
+	_f := "(*Widget).Close"
 
 	page, err := p.Page()
 	if err != nil {
 		err = fmt.Errorf("page: %w", err)
-		Log.Error(_f, err)
+		Log.Warn(_f, err)
 		return
 	}
 
@@ -118,21 +118,21 @@ func (p *Pager) Close(w *dgw.Widget, r *dg.MessageReaction) {
 	err = p.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
-		Log.Error(_f, err)
+		Log.Warn(_f, err)
 		return
 	}
 
 	err = p.Ses.MessageReactionsRemoveAll(p.Widget.ChannelID, p.Widget.Message.ID)
 	if err != nil {
 		err = fmt.Errorf("remove reacts %#v %#v: %w", p.Widget.ChannelID, p.Widget.Message.ID, err)
-		Log.Error(_f, err)
+		Log.Warn(_f, err)
 		return
 	}
 
 	p.Widget.Close <- true
 }
 
-func (p *Pager) Update() error {
+func (p *Widget) Update() error {
 	if p.Widget.Message == nil {
 		return ErrNilMessage
 	}

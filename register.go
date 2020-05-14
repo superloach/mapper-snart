@@ -24,14 +24,11 @@ func register(name string, b *bot.Bot) error {
 	_f := "register"
 	Log.Info(_f, "registering routes")
 
-	b.DB.Easy(MapperDB)
-	b.DB.Easy(POITable)
+	b.DB.Once(MapperDB)
+	b.DB.Once(POITable)
 
-	poi := func(ctx *route.Ctx) error {
-		return Poi(b.DB, ctx)
-	}
-	mng := func(ctx *route.Ctx) error {
-		return Manage(b.DB, ctx)
+	search := func(ctx *route.Ctx) error {
+		return Search(b.DB, ctx)
 	}
 
 	b.Router.Add(
@@ -41,7 +38,7 @@ func register(name string, b *bot.Bot) error {
 			Desc:  "Search for any POIs.",
 			Cat:   name,
 			Okay:  nil,
-			Func:  poi,
+			Func:  search,
 		},
 		&route.Route{
 			Name:  "gyms",
@@ -49,7 +46,7 @@ func register(name string, b *bot.Bot) error {
 			Desc:  "Search for Pokemon Go gyms.",
 			Cat:   name,
 			Okay:  nil,
-			Func:  poi,
+			Func:  search,
 		},
 		&route.Route{
 			Name:  "stops",
@@ -57,15 +54,7 @@ func register(name string, b *bot.Bot) error {
 			Desc:  "Search for Pokemon Go stops.",
 			Cat:   name,
 			Okay:  nil,
-			Func:  poi,
-		},
-		&route.Route{
-			Name:  "manage",
-			Match: "m(anage|ng)",
-			Desc:  "Manage POIs",
-			Cat:   name,
-			Okay:  route.BotOwner,
-			Func:  mng,
+			Func:  search,
 		},
 	)
 
