@@ -7,7 +7,7 @@ import (
 	"github.com/go-snart/snart/route"
 )
 
-var Log = minori.GetLogger("mapper/plugin")
+var Log = minori.GetLogger("mapper")
 
 func init() {
 	bot.Register("mapper", Register)
