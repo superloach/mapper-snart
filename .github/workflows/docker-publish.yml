@@ -17,7 +17,7 @@ jobs:
         run: |
           git clone https://github.com/go-snart/example
           cd example
-          ./genplug ${{ github.repository }}
+          ./genplug github.com/${{ github.repository }}
           docker build -t $IMAGE_NAME .
   push:
     needs: build
