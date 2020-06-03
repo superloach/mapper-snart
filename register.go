@@ -21,7 +21,7 @@ func Register(b *bot.Bot) error {
 	b.DB.Once(POITable)
 
 	search := func(ctx *route.Ctx) error {
-		return Search(b.DB, ctx)
+		return Search(b.DB, ctx, b.Admin(ctx))
 	}
 
 	b.Router.Add(

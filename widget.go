@@ -31,7 +31,7 @@ func NewWidget(ses *dg.Session, channelID string, userID string) *Widget {
 
 	w := dgw.NewWidget(ses, channelID, nil)
 	w.UserWhitelist = []string{userID}
-	w.Timeout = time.Minute
+	w.Timeout = 2*time.Minute + 30*time.Second
 	p.Widget = w
 
 	return p

@@ -13,6 +13,24 @@ import (
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
 
+func nick(m *dg.Message) string {
+	if m.Member != nil {
+		if m.Member.Nick != "" {
+			return m.Member.Nick
+		}
+
+		if m.Member.User != nil {
+			return m.Member.User.Username
+		}
+	}
+
+	if m.Author != nil {
+		return m.Author.Username
+	}
+
+	return "NAME UNKNOWN"
+}
+
 func words(s1, s2 string) int {
 	a := 0
 	s1s := strings.Split(s1, " ")
@@ -66,6 +84,9 @@ func search(q string, ps []*POI, min, num int) []*poiScore {
 	}
 
 	sort.Slice(pss, func(i, j int) bool {
+		if pss[i].score == pss[j].score {
+			return pss[i].Name < pss[j].Name
+		}
 		return pss[i].score > pss[j].score
 	})
 
@@ -83,10 +104,17 @@ func clean(s string) string {
 	return fuzzy.Cleanse(s, true)
 }
 
-func Search(d *db.DB, ctx *route.Ctx) error {
+func Search(d *db.DB, ctx *route.Ctx, admin bool) error {
 	_f := "Search"
 
-	debug := ctx.Flags.Bool("debug", false, "print extra info")
+	var debug *bool
+
+	if admin {
+		debug = ctx.Flags.Bool("debug", false, "print extra info")
+	} else {
+		_debug := false
+		debug = &_debug
+	}
 
 	err := ctx.Flags.Parse()
 	if err != nil {
@@ -96,7 +124,17 @@ func Search(d *db.DB, ctx *route.Ctx) error {
 	}
 
 	args := ctx.Flags.Args()
-	if len(args) == 0 {
+	query := strings.Join(args, " ")
+	queries := strings.Split(query, "+")
+	nqueries := make([]string, 0)
+	for _, q := range queries {
+		q = strings.TrimSpace(q)
+		if len(q) == 0 {
+			continue
+		}
+		nqueries = append(nqueries, q)
+	}
+	if len(nqueries) == 0 {
 		rep1 := ctx.Reply()
 		rep1.Content = "please specify a query.\nex: `" +
 			ctx.CleanPrefix + ctx.Route.Name + " name of poi`"
@@ -104,15 +142,64 @@ func Search(d *db.DB, ctx *route.Ctx) error {
 		return rep1.Send()
 	}
 
-	for _, query := range strings.Split(strings.Join(args, " "), "+") {
+	err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
+	if err != nil {
+		err = fmt.Errorf("typing %#v: %w", ctx.Message.ChannelID, err)
+		Log.Warn(_f, err)
+	}
+
+	q := r.DB("mapper").Table("poi")
+
+	bounds := GetBounds(d, ctx)
+	Log.Debugf(_f, "bounds: %#v", bounds)
+
+	if bounds != nil {
+		q = q.Filter((*bounds).Intersects(r.Row.Field("loc")))
+	}
+
+	msg := "POIs suggested for"
+	limit := 100
+
+	switch ctx.Route.Name {
+	case "gyms":
+		q = q.Filter(map[string]interface{}{
+			"pkmn": "G",
+		})
+		msg = "Gyms suggested for"
+		limit = 25
+	case "stops":
+		q = q.Filter(map[string]interface{}{
+			"pkmn": "S",
+		})
+		msg = "PokéStops suggested for"
+		limit = 50
+	default:
+	}
+
+	Log.Debugf(_f, "gonna readall %s", q)
+
+	pois := make([]*POI, 0)
+	err = q.ReadAll(&pois, d)
+	if err != nil {
+		err = fmt.Errorf("readall &pois: %w", err)
+		Log.Error(_f, err)
+		return err
+	}
+
+	Log.Debugf(_f, "read %d", len(pois))
+
+	for _, query := range nqueries {
 		err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 		if err != nil {
 			err = fmt.Errorf("typing %#v: %w", ctx.Message.ChannelID, err)
-			Log.Error(_f, err)
-			return err
+			Log.Warn(_f, err)
 		}
 
-		err = searchQuery(d, ctx, query, *debug)
+		err = searchQuery(
+			d, ctx,
+			query, pois, limit,
+			*debug, msg,
+		)
 		if err != nil {
 			Log.Warn(_f, err)
 		}
@@ -121,31 +208,14 @@ func Search(d *db.DB, ctx *route.Ctx) error {
 	return nil
 }
 
-func searchQuery(d *db.DB, ctx *route.Ctx, query string, debug bool) error {
+func searchQuery(
+	d *db.DB, ctx *route.Ctx,
+	query string, pois []*POI, limit int,
+	debug bool, msg string,
+) error {
 	_f := "searchQuery"
 
-	q := r.DB("mapper").Table("poi")
-	switch ctx.Route.Name {
-	case "gyms":
-		q = q.Filter(map[string]interface{}{
-			"pkmn": "G",
-		})
-	case "stops":
-		q = q.Filter(map[string]interface{}{
-			"pkmn": "S",
-		})
-	default:
-	}
-
-	pois := make([]*POI, 0)
-	err := q.ReadAll(&pois, d)
-	if err != nil {
-		err = fmt.Errorf("readall &pois: %w", err)
-		Log.Error(_f, err)
-		return err
-	}
-
-	pss := search(clean(query), pois, 50, 20)
+	pss := search(clean(query), pois, 50, limit)
 	if len(pss) == 0 {
 		rep2 := ctx.Reply()
 		rep2.Content = "no results found"
@@ -157,38 +227,66 @@ func searchQuery(d *db.DB, ctx *route.Ctx, query string, debug bool) error {
 	for i, ps := range pss {
 		Log.Debugf(_f, "%#v\n", ps)
 
-		desc := []string{}
-		if ps.Notes != "" {
-			desc = append(desc, "Notes:\n```\n"+ps.Notes+"\n```")
-		}
-		if ps.Alias != nil && len(ps.Alias) > 0 {
-			alias := "`" + strings.Join(ps.Alias, "`, `") + "`"
-			desc = append(desc, "Aliases: "+alias)
-		}
-		if debug {
-			desc = append(desc, "ID: `"+ps.ID+"`")
-			if ps.Ingr != "" {
-				desc = append(desc, "Ingress: `"+ps.Ingr+"`")
-			}
-			if ps.Pkmn != "" {
-				desc = append(desc, "Pokemon: `"+ps.Pkmn+"`")
-			}
-			if ps.Wzrd != "" {
-				desc = append(desc, "Wizards: `"+ps.Wzrd+"`")
-			}
-			desc = append(desc, "Score: "+strconv.Itoa(ps.score)+"%")
+		embed := &dg.MessageEmbed{
+			Title: ps.Name,
+			URL:   ps.URL(),
+			Thumbnail: &dg.MessageEmbedThumbnail{
+				URL: ps.Image,
+			},
+			Footer: &dg.MessageEmbedFooter{
+				Text: fmt.Sprintf(
+					"%d/%d %s %s",
+					i+1, len(pss),
+					msg, nick(ctx.Message),
+				),
+			},
 		}
 
-		embed := &dg.MessageEmbed{}
-		embed.Title = ps.Name
-		embed.URL = ps.URL()
-		embed.Description = strings.Join(desc, "\n")
-		embed.Thumbnail = &dg.MessageEmbedThumbnail{
-			URL: ps.Image,
+		if ps.Notes != "" {
+			embed.Fields = append(embed.Fields,
+				&dg.MessageEmbedField{
+					Name:   "Notes",
+					Value:  ps.Notes,
+					Inline: false,
+				},
+			)
 		}
-		embed.Footer = &dg.MessageEmbedFooter{
-			Text: fmt.Sprintf("%d/%d", i+1, len(pss)),
+
+		if ps.Alias != nil && len(ps.Alias) > 0 {
+			embed.Fields = append(embed.Fields,
+				&dg.MessageEmbedField{
+					Name:   "Aliases",
+					Value:  strings.Join(ps.Alias, "\n"),
+					Inline: false,
+				},
+			)
 		}
+
+		if debug {
+			dmsg := []string{}
+
+			dmsg = append(dmsg, "ID: `"+ps.ID+"`")
+			if ps.Ingr != "" {
+				dmsg = append(dmsg, "Ingress: `"+ps.Ingr+"`")
+			}
+			if ps.Pkmn != "" {
+				dmsg = append(dmsg, "Pokemon: `"+ps.Pkmn+"`")
+			}
+			if ps.Wzrd != "" {
+				dmsg = append(dmsg, "Wizards: `"+ps.Wzrd+"`")
+			}
+			dmsg = append(dmsg, "Score: "+strconv.Itoa(ps.score)+"%")
+			dmsg = append(dmsg, "Link: "+ps.URL())
+
+			embed.Fields = append(embed.Fields,
+				&dg.MessageEmbedField{
+					Name:   "Aliases",
+					Value:  strings.Join(dmsg, "\n"),
+					Inline: false,
+				},
+			)
+		}
+
 		pg.Add(embed)
 	}
 
