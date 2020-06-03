@@ -1,9 +1,12 @@
 package mapper
 
-import "fmt"
+import (
+	"fmt"
+	"net/url"
+)
 
 func mapURL(s string) string {
-	return "https://www.google.com/maps/dir//" + s
+	return "https://www.google.com/maps/dir//" + url.PathEscape(s)
 }
 
 func (p *POI) URL() string {

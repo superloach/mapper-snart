@@ -20,6 +20,9 @@ func Register(b *bot.Bot) error {
 	b.DB.Once(MapperDB)
 	b.DB.Once(POITable)
 
+	b.AddGamer(GamerPokemonGO)
+	b.AddGamer(GamerGyms)
+
 	search := func(ctx *route.Ctx) error {
 		return Search(b.DB, ctx, b.Admin(ctx))
 	}

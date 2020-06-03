@@ -37,6 +37,8 @@ func Map(ctx *route.Ctx) error {
 		return rep1.Send()
 	}
 
+	msg := "Map given for"
+
 	for _, query := range nqueries {
 		err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 		if err != nil {
@@ -47,14 +49,10 @@ func Map(ctx *route.Ctx) error {
 		rep := ctx.Reply()
 		rep.Embed = &dg.MessageEmbed{
 			Title: query,
-			URL:   ps.URL(),
-			Thumbnail: &dg.MessageEmbedThumbnail{
-				URL: ps.Image,
-			},
+			URL:   mapURL(query),
 			Footer: &dg.MessageEmbedFooter{
 				Text: fmt.Sprintf(
-					"%d/%d %s %s",
-					i+1, len(pss),
+					"%s %s",
 					msg, nick(ctx.Message),
 				),
 			},
