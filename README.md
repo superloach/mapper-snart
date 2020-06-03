@@ -1,3 +1,5 @@
+![Docker](https://github.com/superloach/mapper/workflows/Docker/badge.svg)
+
 # mapper
 Ingress, Pokémon Go, and Wizards Unite Discord bot.
 
