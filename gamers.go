@@ -8,26 +8,30 @@ import (
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
 
-func GamerText(text string) bot.Gamer {
-	return func(b *bot.Bot) (*dg.Game, error) {
-		return &dg.Game{
-			Name: text,
-			Type: dg.GameTypeGame,
-		}, nil
-	}
-}
+func GamerCounts(lbl string, filts ...interface{}) bot.Gamer {
+	_f := "GamerCounts"
 
-func GamerCount(filt interface{}, lbl string) bot.Gamer {
+	filtqs := make([]r.Term, len(filts))
+	for i, filt := range filts {
+		filtqs[i] = r.DB("mapper").Table("poi").Filter(filt).Count()
+	}
+
 	return func(b *bot.Bot) (*dg.Game, error) {
-		q := r.DB("mapper").Table("poi").Filter(filt).Count()
-		count := make([]int, 0)
-		err := q.ReadAll(&count, b.DB)
-		if err != nil {
-			return nil, err
+		counts := make([]interface{}, len(filts))
+
+		for i, filtq := range filtqs {
+			tmp := make([]interface{}, 0)
+			err := filtq.ReadAll(&tmp, b.DB)
+			if err != nil {
+				err = fmt.Errorf("readall tmp: %w", err)
+				Log.Error(_f, err)
+				return nil, err
+			}
+			counts[i] = tmp[0]
 		}
 
 		return &dg.Game{
-			Name: fmt.Sprintf(lbl, count[0]),
+			Name: fmt.Sprintf(lbl, counts...),
 			Type: dg.GameTypeWatching,
 		}, nil
 	}
