@@ -20,8 +20,12 @@ func Register(b *bot.Bot) error {
 	b.DB.Once(MapperDB)
 	b.DB.Once(POITable)
 
-	b.AddGamer(GamerPokemonGO)
-	b.AddGamer(GamerGyms)
+	b.AddGamer(GamerText("Niantic Games"))
+	b.AddGamer(GamerCount(map[string]interface{}{}, "%d pois"))
+
+	b.AddGamer(GamerText("Pokémon GO"))
+	b.AddGamer(GamerCount(map[string]interface{}{"pkmn": "G"}, "%d Gyms"))
+	b.AddGamer(GamerCount(map[string]interface{}{"pkmn": "S"}, "%d PokéStops"))
 
 	search := func(ctx *route.Ctx) error {
 		return Search(b.DB, ctx, b.Admin(ctx))

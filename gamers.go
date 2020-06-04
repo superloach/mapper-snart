@@ -8,28 +8,27 @@ import (
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
 
-func GamerPokemonGO(b *bot.Bot) (*dg.Game, error) {
-	return &dg.Game{
-		Name: "Pokémon GO",
-		Type: dg.GameTypeGame,
-	}, nil
+func GamerText(text string) bot.Gamer {
+	return func(b *bot.Bot) (*dg.Game, error) {
+		return &dg.Game{
+			Name: text,
+			Type: dg.GameTypeGame,
+		}, nil
+	}
 }
 
-func GamerGyms(b *bot.Bot) (*dg.Game, error) {
-	q := r.DB("mapper").Table("poi").Filter(
-		map[string]interface{}{
-			"pkmn": "G",
-		},
-	).Count()
+func GamerCount(filt interface{}, lbl string) bot.Gamer {
+	return func(b *bot.Bot) (*dg.Game, error) {
+		q := r.DB("mapper").Table("poi").Filter(filt).Count()
+		count := make([]int, 0)
+		err := q.ReadAll(&count, b.DB)
+		if err != nil {
+			return nil, err
+		}
 
-	count := 0
-	err := q.ReadAll(&count, b.DB)
-	if err != nil {
-		return nil, err
+		return &dg.Game{
+			Name: fmt.Sprintf(lbl, count[0]),
+			Type: dg.GameTypeWatching,
+		}, nil
 	}
-
-	return &dg.Game{
-		Name: fmt.Sprintf("%d gyms", count),
-		Type: dg.GameTypeWatching,
-	}, nil
 }
