@@ -157,7 +157,7 @@ func Search(d *db.DB, ctx *route.Ctx, admin bool) error {
 		q = q.Filter((*bounds).Intersects(r.Row.Field("loc")))
 	}
 
-	msg := "POIs suggested for"
+	msg := "POIs"
 	limit := 100
 
 	switch ctx.Route.Name {
@@ -165,13 +165,13 @@ func Search(d *db.DB, ctx *route.Ctx, admin bool) error {
 		q = q.Filter(map[string]interface{}{
 			"pkmn": "G",
 		})
-		msg = "Gyms suggested for"
+		msg = "Gyms"
 		limit = 25
 	case "stops":
 		q = q.Filter(map[string]interface{}{
 			"pkmn": "S",
 		})
-		msg = "PokéStops suggested for"
+		msg = "PokéStops"
 		limit = 50
 	default:
 	}
@@ -229,16 +229,16 @@ func searchQuery(
 
 		embed := &dg.MessageEmbed{
 			Title: ps.Name,
-			URL:   ps.URL(),
+			Description: fmt.Sprintf(
+				"%s suggested for %s",
+				msg, nick(ctx.Message),
+			),
+			URL: ps.URL(),
 			Thumbnail: &dg.MessageEmbedThumbnail{
 				URL: ps.Image,
 			},
 			Footer: &dg.MessageEmbedFooter{
-				Text: fmt.Sprintf(
-					"%d/%d %s %s",
-					i+1, len(pss),
-					msg, nick(ctx.Message),
-				),
+				Text: fmt.Sprintf("%d/%d", i+1, len(pss)),
 			},
 		}
 

@@ -70,12 +70,12 @@ func Register(b *bot.Bot) error {
 			Func:  search,
 		},
 		&route.Route{
-			Name:  "qtest",
-			Match: "qtest",
-			Desc:  "test command for queryer",
+			Name:  "counts",
+			Match: "counts?",
+			Desc:  "get poi counts",
 			Cat:   "mapper",
-			Okay:  nil,
-			Func:  b.DB.Queryer(Qtest),
+			Okay:  b.Admin,
+			Func:  b.DB.Queryer(Counts),
 		},
 	)
 

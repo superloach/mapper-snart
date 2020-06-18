@@ -14,13 +14,15 @@ var (
 	ErrNilMessage       = errors.New("nil message")
 )
 
+var duration = time.Minute
+
 type Widget struct {
 	Pages []*dg.MessageEmbed
 	Index int
 
+	Timer  *time.Timer
 	Widget *dgw.Widget
-
-	Ses *dg.Session
+	Ses    *dg.Session
 }
 
 func NewWidget(ses *dg.Session, channelID string, userID string) *Widget {
@@ -31,7 +33,6 @@ func NewWidget(ses *dg.Session, channelID string, userID string) *Widget {
 
 	w := dgw.NewWidget(ses, channelID, nil)
 	w.UserWhitelist = []string{userID}
-	w.Timeout = 2*time.Minute + 30*time.Second
 	p.Widget = w
 
 	return p
@@ -53,6 +54,15 @@ func (p *Widget) Spawn() error {
 		return err
 	}
 	p.Widget.Embed = page
+
+	p.Timer = time.NewTimer(duration)
+
+	go func(p *Widget) {
+		select {
+		case <-p.Timer.C:
+			p.Close(nil, nil)
+		}
+	}(p)
 
 	return p.Widget.Spawn()
 }
@@ -136,6 +146,8 @@ func (p *Widget) Update() error {
 	if p.Widget.Message == nil {
 		return ErrNilMessage
 	}
+
+	p.Timer.Reset(duration)
 
 	page, err := p.Page()
 	if err != nil {
