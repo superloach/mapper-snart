@@ -14,7 +14,7 @@ var (
 	ErrNilMessage       = errors.New("nil message")
 )
 
-var duration = time.Minute
+const duration = 2*time.Minute + 30*time.Second
 
 type Widget struct {
 	Pages []*dg.MessageEmbed
@@ -38,33 +38,58 @@ func NewWidget(ses *dg.Session, channelID string, userID string) *Widget {
 	return p
 }
 
-func (p *Widget) Spawn() error {
+func (p *Widget) Spawn() {
 	_f := "(*Widget).Spawn"
 
 	defer p.Close(nil, nil)
 
-	p.Widget.Handle("\u25C0", p.PreviousPage)
-	p.Widget.Handle("\u25B6", p.NextPage)
-	p.Widget.Handle("\u2705", p.Close)
+	err := p.Widget.Handle("\u25C0", p.PreviousPage)
+	if err != nil {
+		err = fmt.Errorf("handle \u25C0: %w", err)
+		Log.Warn(_f, err)
+
+		return
+	}
+
+	err = p.Widget.Handle("\u25B6", p.NextPage)
+	if err != nil {
+		err = fmt.Errorf("handle \u25B6: %w", err)
+		Log.Warn(_f, err)
+
+		return
+	}
+
+	err = p.Widget.Handle("\u2705", p.Close)
+	if err != nil {
+		err = fmt.Errorf("handle \u2705: %w", err)
+		Log.Warn(_f, err)
+
+		return
+	}
 
 	page, err := p.Page()
 	if err != nil {
 		err = fmt.Errorf("page: %w", err)
-		Log.Error(_f, err)
-		return err
-	}
-	p.Widget.Embed = page
+		Log.Warn(_f, err)
 
+		return
+	}
+
+	p.Widget.Embed = page
 	p.Timer = time.NewTimer(duration)
 
-	go func(p *Widget) {
-		select {
-		case <-p.Timer.C:
-			p.Close(nil, nil)
-		}
-	}(p)
+	go p.Expire()
 
-	return p.Widget.Spawn()
+	err = p.Widget.Spawn()
+	if err != nil {
+		err = fmt.Errorf("widget spawn: %w", err)
+		Log.Warn(_f, err)
+	}
+}
+
+func (p *Widget) Expire() {
+	<-p.Timer.C
+	p.Close(nil, nil)
 }
 
 func (p *Widget) Add(embeds ...*dg.MessageEmbed) {
@@ -92,6 +117,7 @@ func (p *Widget) NextPage(w *dgw.Widget, r *dg.MessageReaction) {
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
 		Log.Warn(_f, err)
+
 		return
 	}
 }
@@ -109,6 +135,7 @@ func (p *Widget) PreviousPage(w *dgw.Widget, r *dg.MessageReaction) {
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
 		Log.Warn(_f, err)
+
 		return
 	}
 }
@@ -120,6 +147,7 @@ func (p *Widget) Close(w *dgw.Widget, r *dg.MessageReaction) {
 	if err != nil {
 		err = fmt.Errorf("page: %w", err)
 		Log.Warn(_f, err)
+
 		return
 	}
 
@@ -129,6 +157,7 @@ func (p *Widget) Close(w *dgw.Widget, r *dg.MessageReaction) {
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
 		Log.Warn(_f, err)
+
 		return
 	}
 
@@ -136,6 +165,7 @@ func (p *Widget) Close(w *dgw.Widget, r *dg.MessageReaction) {
 	if err != nil {
 		err = fmt.Errorf("remove reacts %#v %#v: %w", p.Widget.ChannelID, p.Widget.Message.ID, err)
 		Log.Warn(_f, err)
+
 		return
 	}
 
@@ -155,5 +185,9 @@ func (p *Widget) Update() error {
 	}
 
 	_, err = p.Widget.UpdateEmbed(page)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

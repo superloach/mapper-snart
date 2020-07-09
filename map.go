@@ -11,24 +11,22 @@ import (
 func Map(ctx *route.Ctx) error {
 	_f := "Map"
 
-	err := ctx.Flags.Parse()
-	if err != nil {
-		err = fmt.Errorf("flag parse: %w", err)
-		Log.Error(_f, err)
-		return err
-	}
+	_ = ctx.Flags.Parse()
 
 	args := ctx.Flags.Args()
 	query := strings.Join(args, " ")
 	queries := strings.Split(query, "+")
 	nqueries := make([]string, 0)
+
 	for _, q := range queries {
 		q = strings.TrimSpace(q)
 		if len(q) == 0 {
 			continue
 		}
+
 		nqueries = append(nqueries, q)
 	}
+
 	if len(nqueries) == 0 {
 		rep1 := ctx.Reply()
 		rep1.Content = "please specify a query.\nex: `" +
@@ -40,7 +38,7 @@ func Map(ctx *route.Ctx) error {
 	msg := "Map given for"
 
 	for _, query := range nqueries {
-		err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
+		err := ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 		if err != nil {
 			err = fmt.Errorf("typing %#v: %w", ctx.Message.ChannelID, err)
 			Log.Warn(_f, err)

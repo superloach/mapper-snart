@@ -13,7 +13,7 @@ func GamerCounts(lbl string, filts ...interface{}) bot.Gamer {
 
 	filtqs := make([]r.Term, len(filts))
 	for i, filt := range filts {
-		filtqs[i] = r.DB("mapper").Table("poi").Filter(filt).Count()
+		filtqs[i] = POITable.Filter(filt).Count()
 	}
 
 	return func(b *bot.Bot) (*dg.Game, error) {
@@ -22,11 +22,14 @@ func GamerCounts(lbl string, filts ...interface{}) bot.Gamer {
 		for i, filtq := range filtqs {
 			tmp := make([]interface{}, 0)
 			err := filtq.ReadAll(&tmp, b.DB)
+
 			if err != nil {
 				err = fmt.Errorf("readall tmp: %w", err)
 				Log.Error(_f, err)
+
 				return nil, err
 			}
+
 			counts[i] = tmp[0]
 		}
 

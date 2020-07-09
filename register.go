@@ -5,21 +5,27 @@ import (
 
 	dg "github.com/bwmarrin/discordgo"
 	"github.com/go-snart/snart/bot"
+	"github.com/go-snart/snart/db"
 	"github.com/go-snart/snart/route"
 )
 
-var Log = minori.GetLogger("mapper")
+const name = "mapper"
+
+var Log = minori.GetLogger(name)
+
+var MapperDB = db.BuildDB("mapper")
 
 func init() {
-	bot.Register("mapper", Register)
+	bot.Register(name, Register)
 }
 
 func Register(b *bot.Bot) error {
 	_f := "Register"
 	Log.Info(_f, "registering")
 
-	b.DB.Once(MapperDB)
-	b.DB.Once(POITable)
+	go POICache(b.DB)
+	go BoundCache(b.DB)
+	go NeighCache(b.DB)
 
 	b.AddGamer(bot.GamerText(
 		"Pokémon GO",
@@ -40,46 +46,52 @@ func Register(b *bot.Bot) error {
 		map[string]interface{}{},
 	))
 
-	search := func(ctx *route.Ctx) error {
-		return Search(b.DB, ctx, b.Admin(ctx))
-	}
-
-	b.Router.Add(
-		&route.Route{
-			Name:  "pois",
-			Match: "pois?",
-			Desc:  "Search for any POIs.",
-			Cat:   "mapper",
-			Okay:  nil,
-			Func:  search,
-		},
-		&route.Route{
-			Name:  "gyms",
-			Match: "g(yms?)?",
-			Desc:  "Search for Pokemon Go gyms.",
-			Cat:   "mapper",
-			Okay:  nil,
-			Func:  search,
-		},
-		&route.Route{
-			Name:  "stops",
-			Match: "s(tops?)?",
-			Desc:  "Search for Pokemon Go stops.",
-			Cat:   "mapper",
-			Okay:  nil,
-			Func:  search,
-		},
-		&route.Route{
-			Name:  "counts",
-			Match: "counts?",
-			Desc:  "get poi counts",
-			Cat:   "mapper",
-			Okay:  b.Admin,
-			Func:  b.DB.Queryer(Counts),
-		},
-	)
+	registerCmds(b)
+	registerAdminCmds(b)
 
 	Log.Info(_f, "registered")
 
 	return nil
+}
+
+func registerCmds(b *bot.Bot) {
+	b.Router.Add(
+		&route.Route{
+			Name:  "poi",
+			Match: "pois?",
+			Desc:  "Search for any POIs.",
+			Cat:   name,
+			Okay:  nil,
+			Func:  Searcher(b, 0),
+		},
+		&route.Route{
+			Name:  "g",
+			Match: "(g(yms?)?)|(fighty place)",
+			Desc:  "Search for Pokemon Go gyms.",
+			Cat:   name,
+			Okay:  nil,
+			Func:  Searcher(b, 'g'),
+		},
+		&route.Route{
+			Name:  "p",
+			Match: "(p(ok[eé]stops?)?)|(s(tops?)?)",
+			Desc:  "Search for Pokemon Go stops.",
+			Cat:   name,
+			Okay:  nil,
+			Func:  Searcher(b, 'p'),
+		},
+	)
+}
+
+func registerAdminCmds(b *bot.Bot) {
+	b.Router.Add(
+		&route.Route{
+			Name:  "count",
+			Match: "counts?",
+			Desc:  "get poi counts",
+			Cat:   name,
+			Okay:  b.Admin,
+			Func:  Counts,
+		},
+	)
 }

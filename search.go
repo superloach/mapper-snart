@@ -2,139 +2,100 @@ package mapper
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
 	dg "github.com/bwmarrin/discordgo"
+	"github.com/go-snart/snart/bot"
 	"github.com/go-snart/snart/db"
 	"github.com/go-snart/snart/route"
-	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
-	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
 
-func nick(m *dg.Message) string {
-	if m.Member != nil {
-		if m.Member.Nick != "" {
-			return m.Member.Nick
-		}
+const ThumbnailHeight = 100
 
-		if m.Member.User != nil {
-			return m.Member.User.Username
-		}
+func Searcher(b *bot.Bot, typ byte) func(ctx *route.Ctx) error {
+	return func(ctx *route.Ctx) error {
+		return Search(b.DB, ctx, b.Admin(ctx), typ)
 	}
-
-	if m.Author != nil {
-		return m.Author.Username
-	}
-
-	return "NAME UNKNOWN"
 }
 
-func words(s1, s2 string) int {
-	a := 0
-	s1s := strings.Split(s1, " ")
-	s2s := strings.Split(s2, " ")
-	for _, w1 := range s1s {
-		for _, w2 := range s2s {
-			if w1 == w2 {
-				a++
-				break
-			}
-		}
-	}
-	a *= 100
-	a /= len(s1s)
-	return a
-}
+func cleanQueries(qs []string) []string {
+	cqs := make([]string, 0, len(qs))
 
-func scorer(s1, s2 string) int {
-	score := 0
-	score += 3 * fuzzy.PartialRatio(s1, s2)
-	score += 2 * fuzzy.Ratio(s1, s2)
-	score += 1 * words(s1, s2)
-	return score / 6
-}
-
-type poiScore struct {
-	*POI
-	score int
-}
-
-func score(q string, p *POI) *poiScore {
-	ps := &poiScore{}
-
-	ps.POI = p
-	ps.score = scorer(q, clean(p.Name))
-
-	for _, a := range p.Alias {
-		s := scorer(q, clean(a))
-		if s > ps.score {
-			ps.score = s
-		}
-	}
-
-	return ps
-}
-
-func search(q string, ps []*POI, min, num int) []*poiScore {
-	pss := make([]*poiScore, len(ps))
-	for i, p := range ps {
-		pss[i] = score(q, p)
-	}
-
-	sort.Slice(pss, func(i, j int) bool {
-		if pss[i].score == pss[j].score {
-			return pss[i].Name < pss[j].Name
-		}
-		return pss[i].score > pss[j].score
-	})
-
-	i := 0
-	for ; i < num && i < len(pss); i++ {
-		if pss[i].score < min {
-			break
-		}
-	}
-
-	return pss[:i]
-}
-
-func clean(s string) string {
-	return fuzzy.Cleanse(s, true)
-}
-
-func Search(d *db.DB, ctx *route.Ctx, admin bool) error {
-	_f := "Search"
-
-	var debug *bool
-
-	if admin {
-		debug = ctx.Flags.Bool("debug", false, "print extra info")
-	} else {
-		_debug := false
-		debug = &_debug
-	}
-
-	err := ctx.Flags.Parse()
-	if err != nil {
-		err = fmt.Errorf("flag parse: %w", err)
-		Log.Error(_f, err)
-		return err
-	}
-
-	args := ctx.Flags.Args()
-	query := strings.Join(args, " ")
-	queries := strings.Split(query, "+")
-	nqueries := make([]string, 0)
-	for _, q := range queries {
+	for _, q := range qs {
 		q = strings.TrimSpace(q)
 		if len(q) == 0 {
 			continue
 		}
-		nqueries = append(nqueries, q)
+
+		cqs = append(cqs, q)
 	}
-	if len(nqueries) == 0 {
+
+	return cqs
+}
+
+func getPOIs(d *db.DB, m *dg.Message, typ byte) []*POI {
+	_f := "getPOIs"
+
+	d.Cache.Lock()
+
+	poiCache := d.Cache.Get("mapper.poi").(db.Cache)
+
+	bound := poiCache
+
+	if d.Cache.Has("mapper.bound." + m.ChannelID) {
+		bound = d.Cache.Get("mapper.bound." + m.ChannelID).(db.Cache)
+	} else if d.Cache.Has("mapper.bound." + m.GuildID) {
+		bound = d.Cache.Get("mapper.bound." + m.GuildID).(db.Cache)
+	}
+
+	d.Cache.Unlock()
+
+	pois := []*POI{}
+
+	bound.Lock()
+	keys := bound.Keys()
+	bound.Unlock()
+
+	poiCache.Lock()
+	for _, k := range keys {
+		poi := poiCache.Get(k).(*POI)
+
+		if typ == 0 || (len(poi.Pkmn) > 0 && poi.Pkmn[0] == typ) {
+			pois = append(pois, poi)
+		}
+	}
+	poiCache.Unlock()
+
+	Log.Debugf(_f, "read %d", len(pois))
+
+	return pois
+}
+
+func Search(
+	d *db.DB, ctx *route.Ctx,
+	admin bool, typ byte,
+) error {
+	_f := "Search"
+
+	err := ctx.Session.ChannelTyping(ctx.Message.ChannelID)
+	if err != nil {
+		err = fmt.Errorf("typing %#v: %w", ctx.Message.ChannelID, err)
+		Log.Warn(_f, err)
+	}
+
+	debug := false
+
+	if admin {
+		ctx.Flags.BoolVar(&debug, "debug", false, "print extra info")
+	}
+
+	_ = ctx.Flags.Parse()
+
+	args := ctx.Flags.Args()
+	queries := cleanQueries(strings.Split(strings.Join(args, " "), "+"))
+
+	if len(queries) == 0 {
 		rep1 := ctx.Reply()
 		rep1.Content = "please specify a query.\nex: `" +
 			ctx.CleanPrefix + ctx.Route.Name + " name of poi`"
@@ -142,70 +103,41 @@ func Search(d *db.DB, ctx *route.Ctx, admin bool) error {
 		return rep1.Send()
 	}
 
-	err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
-	if err != nil {
-		err = fmt.Errorf("typing %#v: %w", ctx.Message.ChannelID, err)
-		Log.Warn(_f, err)
-	}
-
-	q := r.DB("mapper").Table("poi")
-
-	bounds := GetBounds(d, ctx)
-	Log.Debugf(_f, "bounds: %#v", bounds)
-
-	if bounds != nil {
-		q = q.Filter((*bounds).Intersects(r.Row.Field("loc")))
-	}
-
 	msg := "POIs"
 	limit := 100
 
-	switch ctx.Route.Name {
-	case "gyms":
-		q = q.Filter(map[string]interface{}{
-			"pkmn": "G",
-		})
-		msg = "Gyms"
-		limit = 25
-	case "stops":
-		q = q.Filter(map[string]interface{}{
-			"pkmn": "S",
-		})
-		msg = "PokéStops"
-		limit = 50
-	default:
+	switch typ {
+	case 'g':
+		msg, limit = "Gyms", 25
+	case 'p', 's':
+		msg, limit = "PokéStops", 50
 	}
 
-	Log.Debugf(_f, "gonna readall %s", q)
+	pois := getPOIs(d, ctx.Message, typ)
 
-	pois := make([]*POI, 0)
-	err = q.ReadAll(&pois, d)
-	if err != nil {
-		err = fmt.Errorf("readall &pois: %w", err)
-		Log.Error(_f, err)
-		return err
-	}
-
-	Log.Debugf(_f, "read %d", len(pois))
-
-	for _, query := range nqueries {
+	for _, query := range queries {
 		err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 		if err != nil {
 			err = fmt.Errorf("typing %#v: %w", ctx.Message.ChannelID, err)
 			Log.Warn(_f, err)
 		}
 
-		err = searchQuery(
-			d, ctx,
-			query, pois, limit,
-			*debug, msg,
-		)
+		err = searchQuery(d, ctx, query, pois, limit, debug, msg)
 		if err != nil {
 			Log.Warn(_f, err)
 		}
 	}
 
 	return nil
+}
+
+func addField(e *dg.MessageEmbed, name, value string) {
+	e.Fields = append(e.Fields,
+		&dg.MessageEmbedField{
+			Name:  name,
+			Value: value,
+		},
+	)
 }
 
 func searchQuery(
@@ -224,73 +156,75 @@ func searchQuery(
 	}
 
 	pg := NewWidget(ctx.Session, ctx.Message.ChannelID, ctx.Message.Author.ID)
+
 	for i, ps := range pss {
 		Log.Debugf(_f, "%#v\n", ps)
 
-		embed := &dg.MessageEmbed{
-			Title: ps.Name,
-			Description: fmt.Sprintf(
-				"%s suggested for %s",
-				msg, nick(ctx.Message),
-			),
-			URL: ps.URL(),
-			Thumbnail: &dg.MessageEmbedThumbnail{
-				URL: ps.Image,
-			},
-			Footer: &dg.MessageEmbedFooter{
-				Text: fmt.Sprintf("%d/%d", i+1, len(pss)),
-			},
-		}
+		ps.GetNeigh(d)
 
-		if ps.Notes != "" {
-			embed.Fields = append(embed.Fields,
-				&dg.MessageEmbedField{
-					Name:   "Notes",
-					Value:  ps.Notes,
-					Inline: false,
-				},
-			)
-		}
-
-		if ps.Alias != nil && len(ps.Alias) > 0 {
-			embed.Fields = append(embed.Fields,
-				&dg.MessageEmbedField{
-					Name:   "Aliases",
-					Value:  strings.Join(ps.Alias, "\n"),
-					Inline: false,
-				},
-			)
-		}
+		e := mkEmbed(ps, i, len(pss), msg, nick(ctx.Message))
 
 		if debug {
-			dmsg := []string{}
-
-			dmsg = append(dmsg, "ID: `"+ps.ID+"`")
-			if ps.Ingr != "" {
-				dmsg = append(dmsg, "Ingress: `"+ps.Ingr+"`")
-			}
-			if ps.Pkmn != "" {
-				dmsg = append(dmsg, "Pokemon: `"+ps.Pkmn+"`")
-			}
-			if ps.Wzrd != "" {
-				dmsg = append(dmsg, "Wizards: `"+ps.Wzrd+"`")
-			}
-			dmsg = append(dmsg, "Score: "+strconv.Itoa(ps.score)+"%")
-			dmsg = append(dmsg, "Link: "+ps.URL())
-
-			embed.Fields = append(embed.Fields,
-				&dg.MessageEmbedField{
-					Name:   "Aliases",
-					Value:  strings.Join(dmsg, "\n"),
-					Inline: false,
-				},
-			)
+			debugEmbed(e, ps)
 		}
 
-		pg.Add(embed)
+		pg.Add(e)
 	}
 
 	go pg.Spawn()
 
 	return nil
+}
+
+func mkEmbed(ps *poiScore, i, pssl int, msg, n string) *dg.MessageEmbed {
+	embed := &dg.MessageEmbed{
+		Title:       ps.Name,
+		URL:         ps.URL(),
+		Description: ps.Notes,
+		Thumbnail: &dg.MessageEmbedThumbnail{
+			URL:    ps.Image,
+			Height: ThumbnailHeight,
+		},
+		Footer: &dg.MessageEmbedFooter{
+			Text: fmt.Sprintf(
+				"%d/%d %s • %s",
+				i+1, pssl, msg,
+				n,
+			),
+		},
+	}
+
+	if ps.Neigh != nil {
+		embed.Footer.Text = *ps.Neigh + " • " + embed.Footer.Text
+	}
+
+	if ps.Alias != nil && len(ps.Alias) > 0 {
+		addField(embed,
+			"Aliases",
+			"`"+strings.Join(ps.Alias, "`, `")+"`",
+		)
+	}
+
+	return embed
+}
+
+func debugEmbed(e *dg.MessageEmbed, ps *poiScore) {
+	addField(e,
+		"Flags",
+		fmt.Sprintf("%q", map[string]string{
+			"ingr": ps.Ingr,
+			"pkmn": ps.Pkmn,
+			"wzrd": ps.Wzrd,
+		}),
+	)
+
+	addField(e,
+		"Score",
+		strconv.Itoa(ps.Score)+"%",
+	)
+
+	addField(e,
+		"Link",
+		ps.URL(),
+	)
 }
