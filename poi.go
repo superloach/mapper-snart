@@ -8,11 +8,13 @@ import (
 	"gopkg.in/rethinkdb/rethinkdb-go.v6/types"
 )
 
+// POITable is a table builder for mapper.poi.
 var POITable = db.BuildTable(
 	MapperDB, "poi",
 	nil, nil,
 )
 
+// POI contains lots of info about a Point Of Interest in location-based games.
 type POI struct {
 	ID    string `rethinkdb:"id"`
 	Name  string `rethinkdb:"name"`
@@ -30,6 +32,7 @@ type POI struct {
 	Neigh *string `rethinkdb:"-"`
 }
 
+// URL returns a suitable URL for finding directions to the POI.
 func (p *POI) URL() string {
 	return mapURL(fmt.Sprintf(
 		"%.06f,%.06f",
@@ -38,6 +41,7 @@ func (p *POI) URL() string {
 	))
 }
 
+// POICache maintains a running state of known POIs.
 func POICache(d *db.DB) {
 	_f := "POICache"
 

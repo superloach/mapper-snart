@@ -10,12 +10,16 @@ import (
 )
 
 var (
+	// ErrIndexOutOfBounds indicates that an index did not correspond to a page.
 	ErrIndexOutOfBounds = errors.New("index out of bounds")
-	ErrNilMessage       = errors.New("nil message")
+
+	// ErrNilMessage indicates that there was no message to update.
+	ErrNilMessage = errors.New("nil message")
 )
 
 const duration = 2*time.Minute + 30*time.Second
 
+// Widget wraps the state of an embed pager.
 type Widget struct {
 	Pages []*dg.MessageEmbed
 	Index int
@@ -25,25 +29,26 @@ type Widget struct {
 	Ses    *dg.Session
 }
 
+// NewWidget creates a Widget with sensible defaults.
 func NewWidget(ses *dg.Session, channelID string, userID string) *Widget {
-	p := &Widget{}
+	w := &Widget{}
 
-	p.Ses = ses
-	p.Pages = make([]*dg.MessageEmbed, 0)
+	w.Ses = ses
+	w.Pages = make([]*dg.MessageEmbed, 0)
 
-	w := dgw.NewWidget(ses, channelID, nil)
-	w.UserWhitelist = []string{userID}
-	p.Widget = w
+	w.Widget = dgw.NewWidget(ses, channelID, nil)
+	w.Widget.UserWhitelist = []string{userID}
 
-	return p
+	return w
 }
 
-func (p *Widget) Spawn() {
+// Spawn adds handlers for the Widget.
+func (w *Widget) Spawn() {
 	_f := "(*Widget).Spawn"
 
-	defer p.Close(nil, nil)
+	defer w.Close(nil, nil)
 
-	err := p.Widget.Handle("\u25C0", p.PreviousPage)
+	err := w.Widget.Handle("\u25C0", w.PreviousPage)
 	if err != nil {
 		err = fmt.Errorf("handle \u25C0: %w", err)
 		Log.Warn(_f, err)
@@ -51,7 +56,7 @@ func (p *Widget) Spawn() {
 		return
 	}
 
-	err = p.Widget.Handle("\u25B6", p.NextPage)
+	err = w.Widget.Handle("\u25B6", w.NextPage)
 	if err != nil {
 		err = fmt.Errorf("handle \u25B6: %w", err)
 		Log.Warn(_f, err)
@@ -59,7 +64,7 @@ func (p *Widget) Spawn() {
 		return
 	}
 
-	err = p.Widget.Handle("\u2705", p.Close)
+	err = w.Widget.Handle("\u2705", w.Close)
 	if err != nil {
 		err = fmt.Errorf("handle \u2705: %w", err)
 		Log.Warn(_f, err)
@@ -67,7 +72,7 @@ func (p *Widget) Spawn() {
 		return
 	}
 
-	page, err := p.Page()
+	page, err := w.Page()
 	if err != nil {
 		err = fmt.Errorf("page: %w", err)
 		Log.Warn(_f, err)
@@ -75,45 +80,49 @@ func (p *Widget) Spawn() {
 		return
 	}
 
-	p.Widget.Embed = page
-	p.Timer = time.NewTimer(duration)
+	w.Widget.Embed = page
+	w.Timer = time.NewTimer(duration)
 
-	go p.Expire()
+	go w.Expire()
 
-	err = p.Widget.Spawn()
+	err = w.Widget.Spawn()
 	if err != nil {
 		err = fmt.Errorf("widget spawn: %w", err)
 		Log.Warn(_f, err)
 	}
 }
 
-func (p *Widget) Expire() {
-	<-p.Timer.C
-	p.Close(nil, nil)
+// Expire closes the Widget after its Timer returns.
+func (w *Widget) Expire() {
+	<-w.Timer.C
+	w.Close(nil, nil)
 }
 
-func (p *Widget) Add(embeds ...*dg.MessageEmbed) {
-	p.Pages = append(p.Pages, embeds...)
+// Add adds embed pages to the Widget.
+func (w *Widget) Add(embeds ...*dg.MessageEmbed) {
+	w.Pages = append(w.Pages, embeds...)
 }
 
-func (p *Widget) Page() (*dg.MessageEmbed, error) {
-	if p.Index < 0 || p.Index >= len(p.Pages) {
+// Page returns the Widget's current embed page.
+func (w *Widget) Page() (*dg.MessageEmbed, error) {
+	if w.Index < 0 || w.Index >= len(w.Pages) {
 		return nil, ErrIndexOutOfBounds
 	}
 
-	return p.Pages[p.Index], nil
+	return w.Pages[w.Index], nil
 }
 
-func (p *Widget) NextPage(w *dgw.Widget, r *dg.MessageReaction) {
+// NextPage is a handler for the right arrow, which advances the Widget by 1 page.
+func (w *Widget) NextPage(_ *dgw.Widget, r *dg.MessageReaction) {
 	_f := "(*Widget).NextPage"
 
-	if p.Index+1 >= 0 && p.Index+1 < len(p.Pages) {
-		p.Index++
+	if w.Index+1 >= 0 && w.Index+1 < len(w.Pages) {
+		w.Index++
 	} else {
-		p.Index = 0
+		w.Index = 0
 	}
 
-	err := p.Update()
+	err := w.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
 		Log.Warn(_f, err)
@@ -122,16 +131,17 @@ func (p *Widget) NextPage(w *dgw.Widget, r *dg.MessageReaction) {
 	}
 }
 
-func (p *Widget) PreviousPage(w *dgw.Widget, r *dg.MessageReaction) {
+// PreviousPage is a handler for the left arrow, which retracts the Widget by 1 page.
+func (w *Widget) PreviousPage(_ *dgw.Widget, r *dg.MessageReaction) {
 	_f := "(*Widget).PreviousPage"
 
-	if p.Index-1 >= 0 && p.Index-1 < len(p.Pages) {
-		p.Index--
+	if w.Index-1 >= 0 && w.Index-1 < len(w.Pages) {
+		w.Index--
 	} else {
-		p.Index = len(p.Pages) - 1
+		w.Index = len(w.Pages) - 1
 	}
 
-	err := p.Update()
+	err := w.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
 		Log.Warn(_f, err)
@@ -140,10 +150,11 @@ func (p *Widget) PreviousPage(w *dgw.Widget, r *dg.MessageReaction) {
 	}
 }
 
-func (p *Widget) Close(w *dgw.Widget, r *dg.MessageReaction) {
+// Close if a handler for the check mark, which shuts down the Widget.
+func (w *Widget) Close(_ *dgw.Widget, r *dg.MessageReaction) {
 	_f := "(*Widget).Close"
 
-	page, err := p.Page()
+	page, err := w.Page()
 	if err != nil {
 		err = fmt.Errorf("page: %w", err)
 		Log.Warn(_f, err)
@@ -153,7 +164,7 @@ func (p *Widget) Close(w *dgw.Widget, r *dg.MessageReaction) {
 
 	page.Color = 0x77B255
 
-	err = p.Update()
+	err = w.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
 		Log.Warn(_f, err)
@@ -161,30 +172,31 @@ func (p *Widget) Close(w *dgw.Widget, r *dg.MessageReaction) {
 		return
 	}
 
-	err = p.Ses.MessageReactionsRemoveAll(p.Widget.ChannelID, p.Widget.Message.ID)
+	err = w.Ses.MessageReactionsRemoveAll(w.Widget.ChannelID, w.Widget.Message.ID)
 	if err != nil {
-		err = fmt.Errorf("remove reacts %#v %#v: %w", p.Widget.ChannelID, p.Widget.Message.ID, err)
+		err = fmt.Errorf("remove reacts %#v %#v: %w", w.Widget.ChannelID, w.Widget.Message.ID, err)
 		Log.Warn(_f, err)
 
 		return
 	}
 
-	p.Widget.Close <- true
+	w.Widget.Close <- true
 }
 
-func (p *Widget) Update() error {
-	if p.Widget.Message == nil {
+// Update ensures that the current page is displayed correctly.
+func (w *Widget) Update() error {
+	if w.Widget.Message == nil {
 		return ErrNilMessage
 	}
 
-	p.Timer.Reset(duration)
+	w.Timer.Reset(duration)
 
-	page, err := p.Page()
+	page, err := w.Page()
 	if err != nil {
 		return err
 	}
 
-	_, err = p.Widget.UpdateEmbed(page)
+	_, err = w.Widget.UpdateEmbed(page)
 	if err != nil {
 		return err
 	}

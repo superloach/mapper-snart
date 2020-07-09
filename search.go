@@ -11,8 +11,7 @@ import (
 	"github.com/go-snart/snart/route"
 )
 
-const ThumbnailHeight = 100
-
+// Searcher is a wrapper that creates a function suitable for route.
 func Searcher(b *bot.Bot, typ byte) func(ctx *route.Ctx) error {
 	return func(ctx *route.Ctx) error {
 		return Search(b.DB, ctx, b.Admin(ctx), typ)
@@ -72,6 +71,7 @@ func getPOIs(d *db.DB, m *dg.Message, typ byte) []*POI {
 	return pois
 }
 
+// Search performs fuzzy searching on POIs.
 func Search(
 	d *db.DB, ctx *route.Ctx,
 	admin bool, typ byte,
@@ -183,7 +183,7 @@ func mkEmbed(ps *poiScore, i, pssl int, msg, n string) *dg.MessageEmbed {
 		Description: ps.Notes,
 		Thumbnail: &dg.MessageEmbedThumbnail{
 			URL:    ps.Image,
-			Height: ThumbnailHeight,
+			Height: 100,
 		},
 		Footer: &dg.MessageEmbedFooter{
 			Text: fmt.Sprintf(

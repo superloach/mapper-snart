@@ -8,17 +8,20 @@ import (
 	"gopkg.in/rethinkdb/rethinkdb-go.v6/types"
 )
 
+// NeighTable is a table builder for mapper.neigh.
 var NeighTable = db.BuildTable(
 	MapperDB, "neigh",
 	nil, nil,
 )
 
+// Neigh contains the ID, Name, and center point of a neighborhood.
 type Neigh struct {
 	ID   string       `rethinkdb:"id"`
 	Name string       `rethinkdb:"name"`
 	Loc  *types.Point `rethinkdb:"loc"`
 }
 
+// NeighCache maintains a running state of known Neighs.
 func NeighCache(d *db.DB) {
 	_f := "NeighCache"
 

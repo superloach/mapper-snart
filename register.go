@@ -11,14 +11,17 @@ import (
 
 const name = "mapper"
 
+// Log is the logger for mapper.
 var Log = minori.GetLogger(name)
 
+// MapperDB is a DB builder for mapper.
 var MapperDB = db.BuildDB("mapper")
 
 func init() {
 	bot.Register(name, Register)
 }
 
+// Register adds all of mapper's handlers to the given bot.
 func Register(b *bot.Bot) error {
 	_f := "Register"
 	Log.Info(_f, "registering")

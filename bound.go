@@ -8,16 +8,19 @@ import (
 	"gopkg.in/rethinkdb/rethinkdb-go.v6/types"
 )
 
+// BoundTable is a table builder for mapper.bound.
 var BoundTable = db.BuildTable(
 	MapperDB, "bound",
 	nil, nil,
 )
 
+// Bound contains the ID and border of a Guild/Channel boundary.
 type Bound struct {
 	ID    string      `rethinkdb:"id"`
 	Value types.Lines `rethinkdb:"value"`
 }
 
+// BoundCache maintains a running state of known Bounds.
 func BoundCache(d *db.DB) {
 	_f := "BoundCache"
 
@@ -62,6 +65,7 @@ func BoundCache(d *db.DB) {
 	}
 }
 
+// BoundPOICache maintains a running state of POIs within a Bound.
 func BoundPOICache(d *db.DB, bound *Bound) {
 	_f := "BoundPOICache"
 

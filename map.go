@@ -8,6 +8,7 @@ import (
 	"github.com/go-snart/snart/route"
 )
 
+// Map allows a user to get directions to an arbitrary location.
 func Map(ctx *route.Ctx) error {
 	_f := "Map"
 

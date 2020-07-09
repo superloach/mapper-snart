@@ -8,6 +8,7 @@ import (
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
 
+// GamerCounts creates a bot.Gamer which displays POI counts.
 func GamerCounts(lbl string, filts ...interface{}) bot.Gamer {
 	_f := "GamerCounts"
 
