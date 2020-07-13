@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"github.com/superloach/minori"
+	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 
 	dg "github.com/bwmarrin/discordgo"
 	"github.com/go-snart/snart/bot"
@@ -26,7 +27,7 @@ func Register(b *bot.Bot) error {
 	_f := "Register"
 	Log.Info(_f, "registering")
 
-	go POICache(b.DB)
+	go LocationCache(b.DB)
 	go BoundCache(b.DB)
 	go NeighCache(b.DB)
 
@@ -36,8 +37,9 @@ func Register(b *bot.Bot) error {
 	))
 	b.AddGamer(GamerCounts(
 		"%.f Gyms | %.f PokéStops",
-		map[string]interface{}{"pkmn": "G"},
-		map[string]interface{}{"pkmn": "S"},
+		r.Row.Field("pkmn").Eq(PkmnTypeGym).Or(
+			r.Row.Field("pkmn").Eq(PkmnTypeEXGym)),
+		r.Row.Field("pkmn").Eq(PkmnTypeStop),
 	))
 
 	b.AddGamer(bot.GamerText(
@@ -45,7 +47,7 @@ func Register(b *bot.Bot) error {
 		dg.GameTypeGame,
 	))
 	b.AddGamer(GamerCounts(
-		"%.f POIs",
+		"%.f Locations",
 		map[string]interface{}{},
 	))
 
@@ -62,26 +64,33 @@ func registerCmds(b *bot.Bot) {
 		&route.Route{
 			Name:  "poi",
 			Match: "pois?",
-			Desc:  "Search for any POIs.",
+			Desc:  "Search for Niantic POIs.",
 			Cat:   name,
 			Okay:  nil,
-			Func:  Searcher(b, 0),
-		},
-		&route.Route{
-			Name:  "g",
-			Match: "(g(yms?)?)|(fighty place)",
-			Desc:  "Search for Pokemon Go gyms.",
-			Cat:   name,
-			Okay:  nil,
-			Func:  Searcher(b, 'g'),
+			Func: Searcher(b, func(p *Location) bool {
+				return true
+			}, 100, "POIs"),
 		},
 		&route.Route{
 			Name:  "p",
 			Match: "(p(ok[eé]stops?)?)|(s(tops?)?)",
-			Desc:  "Search for Pokemon Go stops.",
+			Desc:  "Search for Pokémon GO Stops.",
 			Cat:   name,
 			Okay:  nil,
-			Func:  Searcher(b, 'p'),
+			Func: Searcher(b, func(p *Location) bool {
+				return p.PkmnType == PkmnTypeStop
+			}, 50, "PokéStops"),
+		},
+		&route.Route{
+			Name:  "g",
+			Match: "(g(yms?)?)|(fighty place)",
+			Desc:  "Search for Pokémon GO Gyms.",
+			Cat:   name,
+			Okay:  nil,
+			Func: Searcher(b, func(p *Location) bool {
+				return p.PkmnType == PkmnTypeGym ||
+					p.PkmnType == PkmnTypeEXGym
+			}, 25, "Gyms"),
 		},
 	)
 }
@@ -93,7 +102,7 @@ func registerAdminCmds(b *bot.Bot) {
 			Match: "counts?",
 			Desc:  "get poi counts",
 			Cat:   name,
-			Okay:  b.Admin,
+			Okay:  b.DB.Admin,
 			Func:  Counts,
 		},
 	)

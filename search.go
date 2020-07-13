@@ -2,7 +2,7 @@ package mapper
 
 import (
 	"fmt"
-	"strconv"
+	"sort"
 	"strings"
 
 	dg "github.com/bwmarrin/discordgo"
@@ -12,9 +12,9 @@ import (
 )
 
 // Searcher is a wrapper that creates a function suitable for route.
-func Searcher(b *bot.Bot, typ byte) func(ctx *route.Ctx) error {
+func Searcher(b *bot.Bot, filt func(*Location) bool, limit int, msg string) func(ctx *route.Ctx) error {
 	return func(ctx *route.Ctx) error {
-		return Search(b.DB, ctx, b.Admin(ctx), typ)
+		return Search(b.DB, ctx, b.DB.Admin(ctx), filt, limit, msg)
 	}
 }
 
@@ -33,14 +33,14 @@ func cleanQueries(qs []string) []string {
 	return cqs
 }
 
-func getPOIs(d *db.DB, m *dg.Message, typ byte) []*POI {
-	_f := "getPOIs"
+func getLocations(d *db.DB, m *dg.Message, filt func(*Location) bool) []*Location {
+	_f := "getLocations"
 
 	d.Cache.Lock()
 
-	poiCache := d.Cache.Get("mapper.poi").(db.Cache)
+	locationCache := d.Cache.Get("mapper.location").(db.Cache)
 
-	bound := poiCache
+	bound := locationCache
 
 	if d.Cache.Has("mapper.bound." + m.ChannelID) {
 		bound = d.Cache.Get("mapper.bound." + m.ChannelID).(db.Cache)
@@ -50,31 +50,30 @@ func getPOIs(d *db.DB, m *dg.Message, typ byte) []*POI {
 
 	d.Cache.Unlock()
 
-	pois := []*POI{}
+	locations := []*Location{}
 
 	bound.Lock()
 	keys := bound.Keys()
 	bound.Unlock()
 
-	poiCache.Lock()
+	locationCache.Lock()
 	for _, k := range keys {
-		poi := poiCache.Get(k).(*POI)
+		location := locationCache.Get(k).(*Location)
 
-		if typ == 0 || (len(poi.Pkmn) > 0 && poi.Pkmn[0] == typ) {
-			pois = append(pois, poi)
+		if filt(location) {
+			locations = append(locations, location)
 		}
 	}
-	poiCache.Unlock()
+	locationCache.Unlock()
 
-	Log.Debugf(_f, "read %d", len(pois))
+	Log.Debugf(_f, "read %d", len(locations))
 
-	return pois
+	return locations
 }
 
-// Search performs fuzzy searching on POIs.
+// Search performs fuzzy searching on Locations.
 func Search(
-	d *db.DB, ctx *route.Ctx,
-	admin bool, typ byte,
+	d *db.DB, ctx *route.Ctx, admin bool, filt func(*Location) bool, limit int, msg string,
 ) error {
 	_f := "Search"
 
@@ -96,24 +95,15 @@ func Search(
 	queries := cleanQueries(strings.Split(strings.Join(args, " "), "+"))
 
 	if len(queries) == 0 {
-		rep1 := ctx.Reply()
-		rep1.Content = "please specify a query.\nex: `" +
-			ctx.CleanPrefix + ctx.Route.Name + " name of poi`"
+		rep := ctx.Reply()
+		rep.Content = fmt.Sprintf(
+			"please specify a query.\nex: `%s%s [name of location]`",
+			ctx.CleanPrefix, ctx.Route.Name)
 
-		return rep1.Send()
+		return rep.Send()
 	}
 
-	msg := "POIs"
-	limit := 100
-
-	switch typ {
-	case 'g':
-		msg, limit = "Gyms", 25
-	case 'p', 's':
-		msg, limit = "PokéStops", 50
-	}
-
-	pois := getPOIs(d, ctx.Message, typ)
+	locations := getLocations(d, ctx.Message, filt)
 
 	for _, query := range queries {
 		err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
@@ -122,7 +112,7 @@ func Search(
 			Log.Warn(_f, err)
 		}
 
-		err = searchQuery(d, ctx, query, pois, limit, debug, msg)
+		err = searchQuery(d, ctx, query, locations, limit, debug, msg)
 		if err != nil {
 			Log.Warn(_f, err)
 		}
@@ -142,15 +132,15 @@ func addField(e *dg.MessageEmbed, name, value string) {
 
 func searchQuery(
 	d *db.DB, ctx *route.Ctx,
-	query string, pois []*POI, limit int,
+	query string, locations []*Location, limit int,
 	debug bool, msg string,
 ) error {
 	_f := "searchQuery"
 
-	pss := search(clean(query), pois, 50, limit)
+	pss := search(clean(query), locations, 50, limit)
 	if len(pss) == 0 {
 		rep2 := ctx.Reply()
-		rep2.Content = "no results found"
+		rep2.Content = fmt.Sprintf("no %s found", msg)
 
 		return rep2.Send()
 	}
@@ -176,11 +166,10 @@ func searchQuery(
 	return nil
 }
 
-func mkEmbed(ps *poiScore, i, pssl int, msg, n string) *dg.MessageEmbed {
+func mkEmbed(ps *locationScore, i, pssl int, msg, n string) *dg.MessageEmbed {
 	embed := &dg.MessageEmbed{
-		Title:       ps.Name,
-		URL:         ps.URL(),
-		Description: ps.Notes,
+		Title: ps.Name,
+		URL:   ps.URL(),
 		Thumbnail: &dg.MessageEmbedThumbnail{
 			URL:    ps.Image,
 			Height: 100,
@@ -188,10 +177,21 @@ func mkEmbed(ps *poiScore, i, pssl int, msg, n string) *dg.MessageEmbed {
 		Footer: &dg.MessageEmbedFooter{
 			Text: fmt.Sprintf(
 				"%d/%d %s • %s",
-				i+1, pssl, msg,
-				n,
-			),
+				i+1, pssl, msg, n),
 		},
+	}
+
+	if ps.Notes != nil {
+		ks := []string(nil)
+		for k := range ps.Notes {
+			ks = append(ks, k)
+		}
+
+		sort.Strings(ks)
+
+		for _, k := range ks {
+			addField(embed, k, ps.Notes[k])
+		}
 	}
 
 	if ps.Neigh != nil {
@@ -199,32 +199,22 @@ func mkEmbed(ps *poiScore, i, pssl int, msg, n string) *dg.MessageEmbed {
 	}
 
 	if ps.Alias != nil && len(ps.Alias) > 0 {
-		addField(embed,
-			"Aliases",
-			"`"+strings.Join(ps.Alias, "`, `")+"`",
-		)
+		addField(embed, "Aliases",
+			"`"+strings.Join(ps.Alias, "`, `")+"`")
 	}
 
 	return embed
 }
 
-func debugEmbed(e *dg.MessageEmbed, ps *poiScore) {
-	addField(e,
-		"Flags",
-		fmt.Sprintf("%q", map[string]string{
-			"ingr": ps.Ingr,
-			"pkmn": ps.Pkmn,
-			"wzrd": ps.Wzrd,
-		}),
-	)
+func debugEmbed(e *dg.MessageEmbed, ps *locationScore) {
+	addField(e, "ID", ps.ID)
 
-	addField(e,
-		"Score",
-		strconv.Itoa(ps.Score)+"%",
-	)
+	addField(e, "Flags", fmt.Sprintf(
+		"ingress: %s\npokemon: %s\nwizards: %s",
+		ps.IngrType, ps.PkmnType, ps.WzrdType,
+	))
 
-	addField(e,
-		"Link",
-		ps.URL(),
-	)
+	addField(e, "Score", fmt.Sprintf("%d%%", ps.Score))
+
+	addField(e, "Link", ps.URL())
 }

@@ -18,9 +18,9 @@ func (n neighDist) String() string {
 	return fmt.Sprintf("%s [%.2fkm]", n.Name, n.Dist/1000)
 }
 
-// GetNeigh calculates the nearest Neigh and sets the POI's Neigh value accordingly.
-func (p *POI) GetNeigh(d *db.DB) {
-	_f := "(*POI).GetNeighs"
+// GetNeigh calculates the nearest Neigh and sets the Location's Neigh value accordingly.
+func (p *Location) GetNeigh(d *db.DB) {
+	_f := "(*Location).GetNeigh"
 
 	if p.Neigh != nil {
 		return

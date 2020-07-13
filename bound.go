@@ -49,7 +49,7 @@ func BoundCache(d *db.DB) {
 		if chng.New != nil {
 			d.Cache.Set("mapper.bound."+chng.New.ID, db.NewMapCache())
 
-			go BoundPOICache(d, chng.New)
+			go BoundLocationCache(d, chng.New)
 		} else {
 			d.Cache.Del("mapper.bound." + chng.Old.ID)
 		}
@@ -65,9 +65,9 @@ func BoundCache(d *db.DB) {
 	}
 }
 
-// BoundPOICache maintains a running state of POIs within a Bound.
-func BoundPOICache(d *db.DB, bound *Bound) {
-	_f := "BoundPOICache"
+// BoundLocationCache maintains a running state of Locations within a Bound.
+func BoundLocationCache(d *db.DB, bound *Bound) {
+	_f := "BoundLocationCache"
 
 	d.WaitReady()
 
@@ -81,7 +81,7 @@ func BoundPOICache(d *db.DB, bound *Bound) {
 
 	val := r.Expr(rql)
 
-	q := POITable.Filter(
+	q := LocationTable.Filter(
 		val.Intersects(r.Row.Field("loc")),
 	).Field("id").Changes(
 		r.ChangesOpts{IncludeInitial: true},

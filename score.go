@@ -7,8 +7,8 @@ import (
 	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 )
 
-type poiScore struct {
-	*POI
+type locationScore struct {
+	*Location
 	Score int
 }
 
@@ -34,10 +34,10 @@ func scorer(s1, s2 string) int {
 		1*words(s1, s2)) / 6
 }
 
-func scorePOI(q string, p *POI) *poiScore {
-	ps := &poiScore{
-		POI:   p,
-		Score: scorer(q, clean(p.Name)),
+func scoreLocation(q string, p *Location) *locationScore {
+	ps := &locationScore{
+		Location: p,
+		Score:    scorer(q, clean(p.Name)),
 	}
 
 	for _, a := range p.Alias {
@@ -50,10 +50,10 @@ func scorePOI(q string, p *POI) *poiScore {
 	return ps
 }
 
-func search(q string, ps []*POI, min, num int) []*poiScore {
-	pss := make([]*poiScore, len(ps))
+func search(q string, ps []*Location, min, num int) []*locationScore {
+	pss := make([]*locationScore, len(ps))
 	for i, p := range ps {
-		pss[i] = scorePOI(q, p)
+		pss[i] = scoreLocation(q, p)
 	}
 
 	sort.Slice(pss, func(i, j int) bool {

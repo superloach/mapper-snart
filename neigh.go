@@ -63,7 +63,7 @@ func NeighCache(d *db.DB) {
 
 		cache.Unlock()
 
-		clearPOINeighs(d)
+		clearLocationNeighs(d)
 	}
 
 	if err := curs.Err(); err != nil {
@@ -83,20 +83,20 @@ func NeighCache(d *db.DB) {
 	}
 }
 
-func clearPOINeighs(d *db.DB) {
+func clearLocationNeighs(d *db.DB) {
 	d.Cache.Lock()
-	poiCache := d.Cache.Get("mapper.poi").(db.Cache)
+	locationCache := d.Cache.Get("mapper.location").(db.Cache)
 	d.Cache.Unlock()
 
-	poiCache.Lock()
-	keys := poiCache.Keys()
-	poiCache.Unlock()
+	locationCache.Lock()
+	keys := locationCache.Keys()
+	locationCache.Unlock()
 
 	for _, k := range keys {
-		poiCache.Lock()
-		poi := poiCache.Get(k).(*POI)
-		poiCache.Unlock()
+		locationCache.Lock()
+		location := locationCache.Get(k).(*Location)
+		locationCache.Unlock()
 
-		poi.Neigh = nil
+		location.Neigh = nil
 	}
 }

@@ -8,13 +8,13 @@ import (
 	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
 )
 
-// GamerCounts creates a bot.Gamer which displays POI counts.
+// GamerCounts creates a bot.Gamer which displays Location counts.
 func GamerCounts(lbl string, filts ...interface{}) bot.Gamer {
 	_f := "GamerCounts"
 
 	filtqs := make([]r.Term, len(filts))
 	for i, filt := range filts {
-		filtqs[i] = POITable.Filter(filt).Count()
+		filtqs[i] = LocationTable.Filter(filt).Count()
 	}
 
 	return func(b *bot.Bot) (*dg.Game, error) {
