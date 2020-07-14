@@ -1,3 +1,4 @@
+// Package mapper is a Snart plugin which provides mapping for Locations in various location-based games.
 package mapper
 
 import (

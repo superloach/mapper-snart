@@ -6,7 +6,7 @@ require (
 	github.com/Necroforger/dgwidgets v0.0.0-20190131052008-56c8c1ca33e0
 	github.com/bwmarrin/discordgo v0.21.1
 	github.com/dlclark/regexp2 v1.2.0 // indirect
-	github.com/go-snart/snart v0.0.0-20200714134401-b68889d274ac
+	github.com/go-snart/snart v0.0.0-20200714140823-99ba8fa073f0
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/go-querystring v1.0.0
 	github.com/gorilla/websocket v1.4.2 // indirect
