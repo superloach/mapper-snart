@@ -9,10 +9,7 @@ import (
 )
 
 // LocationTable is a table builder for mapper.location.
-var LocationTable = db.BuildTable(
-	MapperDB, "location",
-	nil, nil,
-)
+var LocationTable = db.BuildTable(MapperDB, "location")
 
 // Location contains lots of info about a Point Of Interest in location-based games.
 type Location struct {
@@ -53,9 +50,8 @@ func LocationCache(d *db.DB) {
 		d.Cache.Unlock()
 	}
 
-	q := LocationTable.Changes(
-		r.ChangesOpts{IncludeInitial: true},
-	)
+	q := LocationTable.Build(d).Changes(
+		r.ChangesOpts{IncludeInitial: true})
 
 	curs, err := q.Run(d)
 	if err != nil {

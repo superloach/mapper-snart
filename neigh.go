@@ -9,10 +9,7 @@ import (
 )
 
 // NeighTable is a table builder for mapper.neigh.
-var NeighTable = db.BuildTable(
-	MapperDB, "neigh",
-	nil, nil,
-)
+var NeighTable = db.BuildTable(MapperDB, "neigh")
 
 // Neigh contains the ID, Name, and center point of a neighborhood.
 type Neigh struct {
@@ -27,7 +24,7 @@ func NeighCache(d *db.DB) {
 
 	d.WaitReady()
 
-	q := NeighTable.Changes(
+	q := NeighTable.Build(d).Changes(
 		r.ChangesOpts{IncludeInitial: true},
 	)
 
@@ -38,6 +35,7 @@ func NeighCache(d *db.DB) {
 
 		return
 	}
+	defer curs.Close()
 
 	chng := struct {
 		New *Neigh `rethinkdb:"new_val"`

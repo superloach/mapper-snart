@@ -9,10 +9,7 @@ import (
 )
 
 // BoundTable is a table builder for mapper.bound.
-var BoundTable = db.BuildTable(
-	MapperDB, "bound",
-	nil, nil,
-)
+var BoundTable = db.BuildTable(MapperDB, "bound")
 
 // Bound contains the ID and border of a Guild/Channel boundary.
 type Bound struct {
@@ -26,7 +23,7 @@ func BoundCache(d *db.DB) {
 
 	d.WaitReady()
 
-	q := BoundTable.Changes(
+	q := BoundTable.Build(d).Changes(
 		r.ChangesOpts{IncludeInitial: true},
 	)
 
@@ -37,6 +34,7 @@ func BoundCache(d *db.DB) {
 
 		return
 	}
+	defer curs.Close()
 
 	chng := struct {
 		New *Bound `rethinkdb:"new_val"`
@@ -81,7 +79,7 @@ func BoundLocationCache(d *db.DB, bound *Bound) {
 
 	val := r.Expr(rql)
 
-	q := LocationTable.Filter(
+	q := LocationTable.Build(d).Filter(
 		val.Intersects(r.Row.Field("loc")),
 	).Field("id").Changes(
 		r.ChangesOpts{IncludeInitial: true},
@@ -94,6 +92,7 @@ func BoundLocationCache(d *db.DB, bound *Bound) {
 
 		return
 	}
+	defer curs.Close()
 
 	chng := struct {
 		New *string `rethinkdb:"new_val"`

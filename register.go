@@ -31,26 +31,7 @@ func Register(b *bot.Bot) error {
 	go BoundCache(b.DB)
 	go NeighCache(b.DB)
 
-	b.AddGamer(bot.GamerText(
-		"Pokémon GO",
-		dg.GameTypeGame,
-	))
-	b.AddGamer(GamerCounts(
-		"%.f Gyms | %.f PokéStops",
-		r.Row.Field("pkmn").Eq(PkmnTypeGym).Or(
-			r.Row.Field("pkmn").Eq(PkmnTypeEXGym)),
-		r.Row.Field("pkmn").Eq(PkmnTypeStop),
-	))
-
-	b.AddGamer(bot.GamerText(
-		"Ingress",
-		dg.GameTypeGame,
-	))
-	b.AddGamer(GamerCounts(
-		"%.f Locations",
-		map[string]interface{}{},
-	))
-
+	registerGamers(b)
 	registerCmds(b)
 	registerAdminCmds(b)
 
@@ -59,51 +40,57 @@ func Register(b *bot.Bot) error {
 	return nil
 }
 
+func registerGamers(b *bot.Bot) {
+	b.AddGamer(bot.GamerText("Pokémon GO", dg.GameTypeGame))
+	b.AddGamer(GamerCounts("%.f Gyms | %.f PokéStops",
+		r.Row.Field("pkmn").Eq(PkmnTypeGym).Or(
+			r.Row.Field("pkmn").Eq(PkmnTypeEXGym)),
+		r.Row.Field("pkmn").Eq(PkmnTypeStop)))
+
+	b.AddGamer(bot.GamerText("Ingress", dg.GameTypeGame))
+	b.AddGamer(GamerCounts("%.f Portals",
+		r.Row.Field("ingr").Eq(IngrTypePortal)))
+}
+
 func registerCmds(b *bot.Bot) {
-	b.Router.Add(
-		&route.Route{
-			Name:  "poi",
-			Match: "pois?",
-			Desc:  "Search for Niantic POIs.",
-			Cat:   name,
-			Okay:  nil,
-			Func: Searcher(b, func(p *Location) bool {
-				return true
-			}, 100, "POIs"),
-		},
-		&route.Route{
-			Name:  "p",
-			Match: "(p(ok[eé]stops?)?)|(s(tops?)?)",
-			Desc:  "Search for Pokémon GO Stops.",
-			Cat:   name,
-			Okay:  nil,
-			Func: Searcher(b, func(p *Location) bool {
-				return p.PkmnType == PkmnTypeStop
-			}, 50, "PokéStops"),
-		},
-		&route.Route{
-			Name:  "g",
-			Match: "(g(yms?)?)|(fighty place)",
-			Desc:  "Search for Pokémon GO Gyms.",
-			Cat:   name,
-			Okay:  nil,
-			Func: Searcher(b, func(p *Location) bool {
-				return p.PkmnType == PkmnTypeGym ||
-					p.PkmnType == PkmnTypeEXGym
-			}, 25, "Gyms"),
-		},
-	)
+	b.Router.Add(&route.Route{
+		Name:  "poi",
+		Match: "pois?",
+		Desc:  "Search for Niantic POIs.",
+		Cat:   name,
+		Okay:  nil,
+		Func: Searcher(b, func(p *Location) bool {
+			return true
+		}, 100, "POIs"),
+	}, &route.Route{
+		Name:  "p",
+		Match: "(p(ok[eé]stops?)?)|(s(tops?)?)",
+		Desc:  "Search for Pokémon GO Stops.",
+		Cat:   name,
+		Okay:  nil,
+		Func: Searcher(b, func(p *Location) bool {
+			return p.PkmnType == PkmnTypeStop
+		}, 50, "PokéStops"),
+	}, &route.Route{
+		Name:  "g",
+		Match: "(g(yms?)?)|(fighty place)",
+		Desc:  "Search for Pokémon GO Gyms.",
+		Cat:   name,
+		Okay:  nil,
+		Func: Searcher(b, func(p *Location) bool {
+			return p.PkmnType == PkmnTypeGym ||
+				p.PkmnType == PkmnTypeEXGym
+		}, 25, "Gyms"),
+	})
 }
 
 func registerAdminCmds(b *bot.Bot) {
-	b.Router.Add(
-		&route.Route{
-			Name:  "count",
-			Match: "counts?",
-			Desc:  "get poi counts",
-			Cat:   name,
-			Okay:  b.DB.Admin,
-			Func:  Counts,
-		},
-	)
+	b.Router.Add(&route.Route{
+		Name:  "count",
+		Match: "counts?",
+		Desc:  "get poi counts",
+		Cat:   name,
+		Okay:  b.DB.Admin,
+		Func:  Counts,
+	})
 }

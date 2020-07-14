@@ -12,12 +12,14 @@ import (
 func GamerCounts(lbl string, filts ...interface{}) bot.Gamer {
 	_f := "GamerCounts"
 
-	filtqs := make([]r.Term, len(filts))
-	for i, filt := range filts {
-		filtqs[i] = LocationTable.Filter(filt).Count()
-	}
-
 	return func(b *bot.Bot) (*dg.Game, error) {
+		loct := LocationTable.Build(b.DB)
+
+		filtqs := make([]r.Term, len(filts))
+		for i, filt := range filts {
+			filtqs[i] = loct.Filter(filt).Count()
+		}
+
 		counts := make([]interface{}, len(filts))
 
 		for i, filtq := range filtqs {
