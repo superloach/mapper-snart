@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -10,6 +11,10 @@ import (
 type locationScore struct {
 	*Location
 	Score int
+}
+
+func (l *locationScore) String() string {
+	return fmt.Sprintf("%q:%d", l.Location.Name, l.Score)
 }
 
 func words(s1, s2 string) int {
@@ -35,13 +40,24 @@ func scorer(s1, s2 string) int {
 }
 
 func scoreLocation(q string, p *Location) *locationScore {
-	ps := &locationScore{
-		Location: p,
-		Score:    scorer(q, clean(p.Name)),
+	//_f := "scoreLocation"
+
+	names := []string{p.Name}
+
+	for _, alias := range p.Aliases {
+		names = append(names, alias)
 	}
 
-	for _, a := range p.Alias {
-		s := scorer(q, clean(a))
+	ps := &locationScore{
+		Location: p,
+		Score:    0,
+	}
+
+	for _, name := range names {
+		s := scorer(q, clean(name))
+
+		//Log.Debugf(_f, "%q:%d", name, s)
+
 		if s > ps.Score {
 			ps.Score = s
 		}
@@ -57,9 +73,6 @@ func search(q string, ps []*Location, min, num int) []*locationScore {
 	}
 
 	sort.Slice(pss, func(i, j int) bool {
-		if pss[i].Score == pss[j].Score {
-			return pss[i].Name < pss[j].Name
-		}
 		return pss[i].Score > pss[j].Score
 	})
 

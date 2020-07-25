@@ -1,92 +1,105 @@
 package mapper
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/dewski/spatial"
+
 	"github.com/go-snart/snart/db"
-	r "gopkg.in/rethinkdb/rethinkdb-go.v6"
-	"gopkg.in/rethinkdb/rethinkdb-go.v6/types"
 )
 
 // LocationTable is a table builder for mapper.location.
-var LocationTable = db.BuildTable(MapperDB, "location")
+func LocationTable(ctx context.Context, d *db.DB) {
+	const q = `CREATE TABLE IF NOT EXISTS location(
+		id TEXT PRIMARY KEY UNIQUE NOT NULL,
+		name TEXT,
+		image TEXT,
+		notes TEXT,
+
+		value GEOMETRY(POINT),
+
+		ingrtype INT,
+		pkmntype INT,
+		wzrdtype INT,
+
+		aliases TEXT[]
+	)`
+	x, err := d.Conn(&ctx).Exec(ctx, q)
+	Log.Debugf("locationtable", "%#v %#v", x, err)
+}
 
 // Location contains lots of info about a Point Of Interest in location-based games.
 type Location struct {
-	ID    string            `rethinkdb:"id"`
-	Name  string            `rethinkdb:"name"`
-	Image string            `rethinkdb:"image"`
-	Notes map[string]string `rethinkdb:"notes"`
+	ID    string
+	Name  string
+	Image string
+	Notes string
 
-	Loc *types.Point `rethinkdb:"loc"`
+	Value spatial.Point
 
-	IngrType IngrType `rethinkdb:"ingr"`
-	PkmnType PkmnType `rethinkdb:"pkmn"`
-	WzrdType WzrdType `rethinkdb:"wzrd"`
+	IngrType IngrType
+	PkmnType PkmnType
+	WzrdType WzrdType
 
-	Alias []string `rethinkdb:"alias"`
-
-	Neigh *string `rethinkdb:"-"`
+	Aliases []string
 }
 
 // URL returns a suitable URL for finding directions to the Location.
 func (p *Location) URL() string {
 	return mapURL(fmt.Sprintf(
 		"%.06f,%.06f",
-		p.Loc.Lat,
-		p.Loc.Lon,
+		p.Value.Lat,
+		p.Value.Lng,
 	))
 }
 
-// LocationCache maintains a running state of known Locations.
-func LocationCache(d *db.DB) {
-	_f := "LocationCache"
+func GetLocations(d *db.DB, ctx context.Context) ([]*Location, error) {
+	_f := "GetLocations"
 
-	d.WaitReady()
+	const q = `
+		SELECT
+			id, name, image, notes,
+			value,
+			ingrtype, pkmntype, wzrdtype,
+			aliases
+		FROM location
+	`
 
-	if !d.Cache.Has("mapper.location") {
-		d.Cache.Lock()
-		d.Cache.Set("mapper.location", db.NewMapCache())
-		d.Cache.Unlock()
-	}
-
-	q := LocationTable.Build(d).Changes(
-		r.ChangesOpts{IncludeInitial: true})
-
-	curs, err := q.Run(d)
+	rows, err := d.Conn(&ctx).Query(ctx, q)
 	if err != nil {
 		err = fmt.Errorf("db run %s: %w", q, err)
 		Log.Error(_f, err)
 
-		return
+		return nil, err
 	}
-	defer curs.Close()
+	defer rows.Close()
 
-	chng := struct {
-		New *Location `rethinkdb:"new_val"`
-		Old *Location `rethinkdb:"old_val"`
-	}{}
+	locs := []*Location(nil)
 
-	d.Cache.Lock()
-	cache, _ := d.Cache.Get("mapper.location").(db.Cache)
-	d.Cache.Unlock()
+	for rows.Next() {
+		loc := &Location{}
 
-	for curs.Next(&chng) {
-		cache.Lock()
-
-		if chng.New == nil {
-			cache.Del(chng.Old.ID)
-		} else {
-			cache.Set(chng.New.ID, chng.New)
+		err := rows.Scan(
+			&loc.ID, &loc.Name, &loc.Image, &loc.Notes,
+			&loc.Value,
+			&loc.IngrType, &loc.PkmnType, &loc.WzrdType,
+			&loc.Aliases,
+		)
+		if err != nil {
+			return nil, err
 		}
 
-		cache.Unlock()
+		locs = append(locs, loc)
 	}
 
-	if err := curs.Err(); err != nil {
+	err = rows.Err()
+	if err != nil {
 		err = fmt.Errorf("curs err: %w", err)
 		Log.Error(_f, err)
 
-		return
+		return nil, err
 	}
+
+	return locs, nil
 }

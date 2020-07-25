@@ -1,7 +1,7 @@
 ![Docker](https://github.com/superloach/mapper/workflows/Docker/badge.svg)
 
 # mapper
-Ingress, Pokémon Go, and Wizards Unite Discord bot.
+A Discord bot for Ingress, Pokémon GO, and Harry Potter: Wizards Unite.
 
 ## docker build
 This repository is a plugin for [Snart](https://github.com/go-snart/snart). Thus, an easy way to build a Docker image for a bot with this plugin is using [go-snart/example](https://github.com/go-snart/example).

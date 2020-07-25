@@ -2,19 +2,20 @@ package mapper
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	dg "github.com/bwmarrin/discordgo"
+
 	"github.com/go-snart/snart/bot"
 	"github.com/go-snart/snart/db"
+	"github.com/go-snart/snart/db/admin"
 	"github.com/go-snart/snart/route"
 )
 
 // Searcher is a wrapper that creates a function suitable for route.
 func Searcher(b *bot.Bot, filt func(*Location) bool, limit int, msg string) func(ctx *route.Ctx) error {
 	return func(ctx *route.Ctx) error {
-		return Search(b.DB, ctx, b.DB.Admin(ctx), filt, limit, msg)
+		return Search(b.DB, ctx, admin.IsAdmin(b.DB)(ctx), filt, limit, msg)
 	}
 }
 
@@ -31,44 +32,6 @@ func cleanQueries(qs []string) []string {
 	}
 
 	return cqs
-}
-
-func getLocations(d *db.DB, m *dg.Message, filt func(*Location) bool) []*Location {
-	_f := "getLocations"
-
-	d.Cache.Lock()
-
-	locationCache := d.Cache.Get("mapper.location").(db.Cache)
-
-	bound := locationCache
-
-	if d.Cache.Has("mapper.bound." + m.ChannelID) {
-		bound = d.Cache.Get("mapper.bound." + m.ChannelID).(db.Cache)
-	} else if d.Cache.Has("mapper.bound." + m.GuildID) {
-		bound = d.Cache.Get("mapper.bound." + m.GuildID).(db.Cache)
-	}
-
-	d.Cache.Unlock()
-
-	locations := []*Location{}
-
-	bound.Lock()
-	keys := bound.Keys()
-	bound.Unlock()
-
-	locationCache.Lock()
-	for _, k := range keys {
-		location := locationCache.Get(k).(*Location)
-
-		if filt(location) {
-			locations = append(locations, location)
-		}
-	}
-	locationCache.Unlock()
-
-	Log.Debugf(_f, "read %d", len(locations))
-
-	return locations
 }
 
 // Search performs fuzzy searching on Locations.
@@ -103,7 +66,7 @@ func Search(
 		return rep.Send()
 	}
 
-	locations := getLocations(d, ctx.Message, filt)
+	locs, err := GetLocations(d, ctx)
 
 	for _, query := range queries {
 		err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
@@ -112,7 +75,7 @@ func Search(
 			Log.Warn(_f, err)
 		}
 
-		err = searchQuery(d, ctx, query, locations, limit, debug, msg)
+		err = searchQuery(d, ctx, query, locs, limit, debug, msg)
 		if err != nil {
 			Log.Warn(_f, err)
 		}
@@ -148,9 +111,7 @@ func searchQuery(
 	pg := NewWidget(ctx.Session, ctx.Message.ChannelID, ctx.Message.Author.ID)
 
 	for i, ps := range pss {
-		Log.Debugf(_f, "%#v\n", ps)
-
-		ps.GetNeigh(d)
+		Log.Debug(_f, ps)
 
 		e := mkEmbed(ps, i, len(pss), msg, nick(ctx.Message))
 
@@ -181,26 +142,13 @@ func mkEmbed(ps *locationScore, i, pssl int, msg, n string) *dg.MessageEmbed {
 		},
 	}
 
-	if ps.Notes != nil {
-		ks := []string(nil)
-		for k := range ps.Notes {
-			ks = append(ks, k)
-		}
-
-		sort.Strings(ks)
-
-		for _, k := range ks {
-			addField(embed, k, ps.Notes[k])
-		}
+	if ps.Notes != "" {
+		addField(embed, "Notes", ps.Notes)
 	}
 
-	if ps.Neigh != nil {
-		embed.Footer.Text = *ps.Neigh + " • " + embed.Footer.Text
-	}
-
-	if ps.Alias != nil && len(ps.Alias) > 0 {
-		addField(embed, "Aliases",
-			"`"+strings.Join(ps.Alias, "`, `")+"`")
+	if ps.Aliases != nil && len(ps.Aliases) > 0 {
+		addField(embed, "Aliases", fmt.Sprintf("`%s`",
+			strings.Join(ps.Aliases, "`, `")))
 	}
 
 	return embed
