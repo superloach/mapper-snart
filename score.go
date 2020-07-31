@@ -40,13 +40,7 @@ func scorer(s1, s2 string) int {
 }
 
 func scoreLocation(q string, p *Location) *locationScore {
-	//_f := "scoreLocation"
-
-	names := []string{p.Name}
-
-	for _, alias := range p.Aliases {
-		names = append(names, alias)
-	}
+	names := append([]string{p.Name}, p.Aliases...)
 
 	ps := &locationScore{
 		Location: p,
@@ -55,8 +49,6 @@ func scoreLocation(q string, p *Location) *locationScore {
 
 	for _, name := range names {
 		s := scorer(q, clean(name))
-
-		//Log.Debugf(_f, "%q:%d", name, s)
 
 		if s > ps.Score {
 			ps.Score = s

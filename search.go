@@ -13,9 +13,15 @@ import (
 )
 
 // Searcher is a wrapper that creates a function suitable for route.
-func Searcher(b *bot.Bot, filt func(*Location) bool, limit int, msg string) func(ctx *route.Ctx) error {
+func Searcher(
+	b *bot.Bot, filt func(*Location) bool,
+	limit int, msg string,
+) func(ctx *route.Ctx) error {
 	return func(ctx *route.Ctx) error {
-		return Search(b.DB, ctx, admin.IsAdmin(b.DB)(ctx), filt, limit, msg)
+		return Search(
+			b.DB, ctx, admin.IsAdmin(b.DB)(ctx),
+			filt, limit, msg,
+		)
 	}
 }
 
@@ -36,49 +42,54 @@ func cleanQueries(qs []string) []string {
 
 // Search performs fuzzy searching on Locations.
 func Search(
-	d *db.DB, ctx *route.Ctx, admin bool, filt func(*Location) bool, limit int, msg string,
+	d *db.DB, ctx *route.Ctx, admin bool,
+	filt func(*Location) bool, limit int, msg string,
 ) error {
-	_f := "Search"
-
 	err := ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 	if err != nil {
-		err = fmt.Errorf("typing %#v: %w", ctx.Message.ChannelID, err)
-		Log.Warn(_f, err)
+		err = fmt.Errorf("typing %q: %w", ctx.Message.ChannelID, err)
+		warn.Println(err)
 	}
 
 	debug := false
 
 	if admin {
-		ctx.Flags.BoolVar(&debug, "debug", false, "print extra info")
+		ctx.Flag.BoolVar(&debug, "debug", false, "print extra info")
 	}
 
-	_ = ctx.Flags.Parse()
+	_ = ctx.Flag.Parse()
 
-	args := ctx.Flags.Args()
+	args := ctx.Flag.Args()
 	queries := cleanQueries(strings.Split(strings.Join(args, " "), "+"))
 
 	if len(queries) == 0 {
 		rep := ctx.Reply()
 		rep.Content = fmt.Sprintf(
 			"please specify a query.\nex: `%s%s [name of location]`",
-			ctx.CleanPrefix, ctx.Route.Name)
+			ctx.Prefix.Clean, ctx.Route.Name)
 
 		return rep.Send()
 	}
 
-	locs, err := GetLocations(d, ctx)
+	locs, err := GetLocations(ctx, d)
+	if err != nil {
+		err = fmt.Errorf("get locs: %w", err)
+		warn.Println(err)
+
+		return err
+	}
 
 	for _, query := range queries {
 		err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 		if err != nil {
-			err = fmt.Errorf("typing %#v: %w", ctx.Message.ChannelID, err)
-			Log.Warn(_f, err)
+			err = fmt.Errorf("typing %q: %w", ctx.Message.ChannelID, err)
+			warn.Println(err)
 		}
 
-		err = searchQuery(d, ctx, query, locs, limit, debug, msg)
-		if err != nil {
-			Log.Warn(_f, err)
-		}
+		searchQuery(
+			ctx, query, locs,
+			limit, debug, msg,
+		)
 	}
 
 	return nil
@@ -94,28 +105,21 @@ func addField(e *dg.MessageEmbed, name, value string) {
 }
 
 func searchQuery(
-	d *db.DB, ctx *route.Ctx,
-	query string, locations []*Location, limit int,
-	debug bool, msg string,
-) error {
-	_f := "searchQuery"
-
+	ctx *route.Ctx, query string, locations []*Location,
+	limit int, _debug bool, msg string,
+) {
 	pss := search(clean(query), locations, 50, limit)
-	if len(pss) == 0 {
-		rep2 := ctx.Reply()
-		rep2.Content = fmt.Sprintf("no %s found", msg)
-
-		return rep2.Send()
-	}
 
 	pg := NewWidget(ctx.Session, ctx.Message.ChannelID, ctx.Message.Author.ID)
 
+	pg.Add(firstEmbed(len(pss), msg, nick(ctx.Message)))
+
 	for i, ps := range pss {
-		Log.Debug(_f, ps)
+		debug.Println(ps)
 
 		e := mkEmbed(ps, i, len(pss), msg, nick(ctx.Message))
 
-		if debug {
+		if _debug {
 			debugEmbed(e, ps)
 		}
 
@@ -123,27 +127,43 @@ func searchQuery(
 	}
 
 	go pg.Spawn()
-
-	return nil
 }
 
-func mkEmbed(ps *locationScore, i, pssl int, msg, n string) *dg.MessageEmbed {
+func firstEmbed(total int, msg, name string) *dg.MessageEmbed {
+	return &dg.MessageEmbed{
+		Title: fmt.Sprintf("%d POIs Found", total),
+		Description: fmt.Sprintf(
+			"%s/%s: navigate left/right\n%s: confirm selection",
+			EmoteLeft, EmoteRight, EmoteConfirm,
+		),
+		Footer: &dg.MessageEmbedFooter{
+			Text: fmt.Sprintf(
+				"%d %s • %s",
+				total, msg, name),
+		},
+	}
+}
+
+func mkEmbed(ps *locationScore, i, pssl int, msg, name string) *dg.MessageEmbed {
 	embed := &dg.MessageEmbed{
 		Title: ps.Name,
 		URL:   ps.URL(),
-		Thumbnail: &dg.MessageEmbedThumbnail{
-			URL:    ps.Image,
-			Height: 100,
-		},
 		Footer: &dg.MessageEmbedFooter{
 			Text: fmt.Sprintf(
 				"%d/%d %s • %s",
-				i+1, pssl, msg, n),
+				i+1, pssl, msg, name),
 		},
 	}
 
-	if ps.Notes != "" {
-		addField(embed, "Notes", ps.Notes)
+	if ps.Image != nil {
+		embed.Thumbnail = &dg.MessageEmbedThumbnail{
+			URL:    *ps.Image,
+			Height: 100,
+		}
+	}
+
+	if ps.Notes != nil {
+		addField(embed, "Notes", *ps.Notes)
 	}
 
 	if ps.Aliases != nil && len(ps.Aliases) > 0 {

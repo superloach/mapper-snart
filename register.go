@@ -2,29 +2,28 @@
 package mapper
 
 import (
-	"github.com/superloach/minori"
-
 	"github.com/go-snart/snart/bot"
+	"github.com/go-snart/snart/logs"
 	"github.com/go-snart/snart/route"
 )
 
-const name = "mapper"
+const _p = "mapper"
 
-// Log is the logger for mapper.
-var Log = minori.GetLogger(name)
+var debug, _, warn = logs.Loggers(_p)
 
 func init() {
-	bot.Register(name, Register)
+	bot.Register(_p, Register)
 }
 
 // Register adds all of mapper's handlers to the given bot.
 func Register(b *bot.Bot) error {
-	_f := "Register"
-	Log.Info(_f, "registering")
+	const _f = "Register"
+
+	debug.Println(_f, "registering")
 
 	registerCmds(b)
 
-	Log.Info(_f, "registered")
+	debug.Println(_f, "registered")
 
 	return nil
 }
@@ -35,7 +34,7 @@ func registerCmds(b *bot.Bot) {
 			Name:  "poi",
 			Match: "pois?",
 			Desc:  "Search for Niantic POIs.",
-			Cat:   name,
+			Cat:   _p,
 			Okay:  nil,
 			Func: Searcher(b, func(p *Location) bool {
 				return true
@@ -46,7 +45,7 @@ func registerCmds(b *bot.Bot) {
 			Name:  "p",
 			Match: "(p(ok[eé]stops?)?)|(s(tops?)?)",
 			Desc:  "Search for Pokémon GO Stops.",
-			Cat:   name,
+			Cat:   _p,
 			Okay:  nil,
 			Func: Searcher(b, func(p *Location) bool {
 				return p.PkmnType == PkmnTypeStop
@@ -57,7 +56,7 @@ func registerCmds(b *bot.Bot) {
 			Name:  "g",
 			Match: "(g(yms?)?)|(fighty place)",
 			Desc:  "Search for Pokémon GO Gyms.",
-			Cat:   name,
+			Cat:   _p,
 			Okay:  nil,
 			Func: Searcher(b, func(p *Location) bool {
 				return p.PkmnType == PkmnTypeGym ||

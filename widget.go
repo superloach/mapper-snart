@@ -42,32 +42,43 @@ func NewWidget(ses *dg.Session, channelID string, userID string) *Widget {
 	return w
 }
 
+const (
+	// EmoteLeft is the code for a left-facing arrow.
+	EmoteLeft = "\u25C0"
+
+	// EmoteRight is the code for a right-facing arrow.
+	EmoteRight = "\u25B6"
+
+	// EmoteConfirm is the code for a check mark.
+	EmoteConfirm = "\u2705"
+)
+
 // Spawn adds handlers for the Widget.
 func (w *Widget) Spawn() {
-	_f := "(*Widget).Spawn"
+	const _f = "(*Widget).Spawn"
 
 	defer w.Close(nil, nil)
 
-	err := w.Widget.Handle("\u25C0", w.PreviousPage)
+	err := w.Widget.Handle(EmoteLeft, w.PreviousPage)
 	if err != nil {
-		err = fmt.Errorf("handle \u25C0: %w", err)
-		Log.Warn(_f, err)
+		err = fmt.Errorf("handle left: %w", err)
+		warn.Println(_f, err)
 
 		return
 	}
 
-	err = w.Widget.Handle("\u25B6", w.NextPage)
+	err = w.Widget.Handle(EmoteRight, w.NextPage)
 	if err != nil {
-		err = fmt.Errorf("handle \u25B6: %w", err)
-		Log.Warn(_f, err)
+		err = fmt.Errorf("handle right: %w", err)
+		warn.Println(_f, err)
 
 		return
 	}
 
-	err = w.Widget.Handle("\u2705", w.Close)
+	err = w.Widget.Handle(EmoteConfirm, w.Close)
 	if err != nil {
-		err = fmt.Errorf("handle \u2705: %w", err)
-		Log.Warn(_f, err)
+		err = fmt.Errorf("handle confirm: %w", err)
+		warn.Println(_f, err)
 
 		return
 	}
@@ -75,7 +86,7 @@ func (w *Widget) Spawn() {
 	page, err := w.Page()
 	if err != nil {
 		err = fmt.Errorf("page: %w", err)
-		Log.Warn(_f, err)
+		warn.Println(_f, err)
 
 		return
 	}
@@ -88,7 +99,7 @@ func (w *Widget) Spawn() {
 	err = w.Widget.Spawn()
 	if err != nil {
 		err = fmt.Errorf("widget spawn: %w", err)
-		Log.Warn(_f, err)
+		warn.Println(_f, err)
 	}
 }
 
@@ -114,7 +125,7 @@ func (w *Widget) Page() (*dg.MessageEmbed, error) {
 
 // NextPage is a handler for the right arrow, which advances the Widget by 1 page.
 func (w *Widget) NextPage(_ *dgw.Widget, r *dg.MessageReaction) {
-	_f := "(*Widget).NextPage"
+	const _f = "(*Widget).NextPage"
 
 	if w.Index+1 >= 0 && w.Index+1 < len(w.Pages) {
 		w.Index++
@@ -125,7 +136,7 @@ func (w *Widget) NextPage(_ *dgw.Widget, r *dg.MessageReaction) {
 	err := w.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
-		Log.Warn(_f, err)
+		warn.Println(_f, err)
 
 		return
 	}
@@ -133,7 +144,7 @@ func (w *Widget) NextPage(_ *dgw.Widget, r *dg.MessageReaction) {
 
 // PreviousPage is a handler for the left arrow, which retracts the Widget by 1 page.
 func (w *Widget) PreviousPage(_ *dgw.Widget, r *dg.MessageReaction) {
-	_f := "(*Widget).PreviousPage"
+	const _f = "(*Widget).PreviousPage"
 
 	if w.Index-1 >= 0 && w.Index-1 < len(w.Pages) {
 		w.Index--
@@ -144,7 +155,7 @@ func (w *Widget) PreviousPage(_ *dgw.Widget, r *dg.MessageReaction) {
 	err := w.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
-		Log.Warn(_f, err)
+		warn.Println(_f, err)
 
 		return
 	}
@@ -152,12 +163,12 @@ func (w *Widget) PreviousPage(_ *dgw.Widget, r *dg.MessageReaction) {
 
 // Close if a handler for the check mark, which shuts down the Widget.
 func (w *Widget) Close(_ *dgw.Widget, r *dg.MessageReaction) {
-	_f := "(*Widget).Close"
+	const _f = "(*Widget).Close"
 
 	page, err := w.Page()
 	if err != nil {
 		err = fmt.Errorf("page: %w", err)
-		Log.Warn(_f, err)
+		warn.Println(_f, err)
 
 		return
 	}
@@ -167,15 +178,15 @@ func (w *Widget) Close(_ *dgw.Widget, r *dg.MessageReaction) {
 	err = w.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
-		Log.Warn(_f, err)
+		warn.Println(_f, err)
 
 		return
 	}
 
 	err = w.Ses.MessageReactionsRemoveAll(w.Widget.ChannelID, w.Widget.Message.ID)
 	if err != nil {
-		err = fmt.Errorf("remove reacts %#v %#v: %w", w.Widget.ChannelID, w.Widget.Message.ID, err)
-		Log.Warn(_f, err)
+		err = fmt.Errorf("remove reacts %q %q: %w", w.Widget.ChannelID, w.Widget.Message.ID, err)
+		warn.Println(_f, err)
 
 		return
 	}

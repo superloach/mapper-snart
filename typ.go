@@ -1,8 +1,6 @@
 package mapper
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // IngrType indicates a Location's type in Ingress.
 type IngrType uint8

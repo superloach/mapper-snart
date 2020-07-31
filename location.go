@@ -11,30 +11,40 @@ import (
 
 // LocationTable is a table builder for mapper.location.
 func LocationTable(ctx context.Context, d *db.DB) {
-	const q = `CREATE TABLE IF NOT EXISTS location(
-		id TEXT PRIMARY KEY UNIQUE NOT NULL,
-		name TEXT,
-		image TEXT,
-		notes TEXT,
+	const (
+		_f = "LocationTable"
+		e  = `CREATE TABLE IF NOT EXISTS location(
+			id TEXT PRIMARY KEY UNIQUE NOT NULL,
+			name TEXT NOT NULL,
+			image TEXT,
+			notes TEXT,
 
-		value GEOMETRY(POINT),
+			value GEOMETRY(POINT) NOT NULL,
 
-		ingrtype INT,
-		pkmntype INT,
-		wzrdtype INT,
+			ingrtype INT NOT NULL,
+			pkmntype INT NOT NULL,
+			wzrdtype INT NOT NULL,
 
-		aliases TEXT[]
-	)`
-	x, err := d.Conn(&ctx).Exec(ctx, q)
-	Log.Debugf("locationtable", "%#v %#v", x, err)
+			aliases TEXT[]
+		)`
+	)
+
+	_, err := d.Conn(&ctx).Exec(ctx, e)
+	if err != nil {
+		err = fmt.Errorf("exec %#q: %w", e, err)
+
+		warn.Println(_f, err)
+
+		return
+	}
 }
 
 // Location contains lots of info about a Point Of Interest in location-based games.
 type Location struct {
 	ID    string
 	Name  string
-	Image string
-	Notes string
+	Image *string
+	Notes *string
 
 	Value spatial.Point
 
@@ -54,8 +64,11 @@ func (p *Location) URL() string {
 	))
 }
 
-func GetLocations(d *db.DB, ctx context.Context) ([]*Location, error) {
-	_f := "GetLocations"
+// GetLocations retrieves a list of Locations from the given DB.
+func GetLocations(ctx context.Context, d *db.DB) ([]*Location, error) {
+	const _f = "GetLocations"
+
+	LocationTable(ctx, d)
 
 	const q = `
 		SELECT
@@ -68,8 +81,9 @@ func GetLocations(d *db.DB, ctx context.Context) ([]*Location, error) {
 
 	rows, err := d.Conn(&ctx).Query(ctx, q)
 	if err != nil {
-		err = fmt.Errorf("db run %s: %w", q, err)
-		Log.Error(_f, err)
+		err = fmt.Errorf("query %#q: %w", q, err)
+
+		warn.Println(_f, err)
 
 		return nil, err
 	}
@@ -96,7 +110,7 @@ func GetLocations(d *db.DB, ctx context.Context) ([]*Location, error) {
 	err = rows.Err()
 	if err != nil {
 		err = fmt.Errorf("curs err: %w", err)
-		Log.Error(_f, err)
+		warn.Println(_f, err)
 
 		return nil, err
 	}
