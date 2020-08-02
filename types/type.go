@@ -1,6 +1,14 @@
-package mapper
+package types
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/go-snart/snart/logs"
+)
+
+const _p = "mapper/types"
+
+var debug, info, warn = logs.Loggers(_p)
 
 // IngrType indicates a Location's type in Ingress.
 type IngrType uint8

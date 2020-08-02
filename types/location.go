@@ -1,4 +1,4 @@
-package mapper
+package types
 
 import (
 	"context"
@@ -53,15 +53,6 @@ type Location struct {
 	WzrdType WzrdType
 
 	Aliases []string
-}
-
-// URL returns a suitable URL for finding directions to the Location.
-func (p *Location) URL() string {
-	return mapURL(fmt.Sprintf(
-		"%.06f,%.06f",
-		p.Value.Lat,
-		p.Value.Lng,
-	))
 }
 
 // GetLocations retrieves a list of Locations from the given DB.

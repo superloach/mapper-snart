@@ -5,6 +5,8 @@ import (
 	"github.com/go-snart/snart/bot"
 	"github.com/go-snart/snart/logs"
 	"github.com/go-snart/snart/route"
+
+	"github.com/superloach/mapper/types"
 )
 
 const _p = "mapper"
@@ -36,7 +38,7 @@ func registerCmds(b *bot.Bot) {
 			Desc:  "Search for Niantic POIs.",
 			Cat:   _p,
 			Okay:  nil,
-			Func: Searcher(b, func(p *Location) bool {
+			Func: Searcher(b, func(l *types.Location) bool {
 				return true
 			}, 100, "POIs"),
 		},
@@ -47,8 +49,8 @@ func registerCmds(b *bot.Bot) {
 			Desc:  "Search for Pokémon GO Stops.",
 			Cat:   _p,
 			Okay:  nil,
-			Func: Searcher(b, func(p *Location) bool {
-				return p.PkmnType == PkmnTypeStop
+			Func: Searcher(b, func(l *types.Location) bool {
+				return l.PkmnType == types.PkmnTypeStop
 			}, 50, "PokéStops"),
 		},
 
@@ -58,9 +60,9 @@ func registerCmds(b *bot.Bot) {
 			Desc:  "Search for Pokémon GO Gyms.",
 			Cat:   _p,
 			Okay:  nil,
-			Func: Searcher(b, func(p *Location) bool {
-				return p.PkmnType == PkmnTypeGym ||
-					p.PkmnType == PkmnTypeEXGym
+			Func: Searcher(b, func(l *types.Location) bool {
+				return l.PkmnType == types.PkmnTypeGym ||
+					l.PkmnType == types.PkmnTypeEXGym
 			}, 25, "Gyms"),
 		},
 	)

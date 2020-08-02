@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	dg "github.com/bwmarrin/discordgo"
@@ -49,7 +50,7 @@ func Map(ctx *route.Ctx) error {
 		rep := ctx.Reply()
 		rep.Embed = &dg.MessageEmbed{
 			Title: query,
-			URL:   mapURL(query),
+			URL:   MapURL(query),
 			Footer: &dg.MessageEmbedFooter{
 				Text: fmt.Sprintf(
 					"%s %s",
@@ -65,4 +66,11 @@ func Map(ctx *route.Ctx) error {
 	}
 
 	return nil
+}
+
+func MapURL(s string) string {
+	s = url.PathEscape(s)
+	s = strings.ReplaceAll(s, url.PathEscape(","), ",")
+
+	return "https://www.google.com/maps/dir//" + s
 }

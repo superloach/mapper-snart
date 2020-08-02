@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	dg "github.com/bwmarrin/discordgo"
+	"github.com/superloach/mapper/types"
 
 	"github.com/go-snart/snart/bot"
 	"github.com/go-snart/snart/db"
@@ -14,7 +15,7 @@ import (
 
 // Searcher is a wrapper that creates a function suitable for route.
 func Searcher(
-	b *bot.Bot, filt func(*Location) bool,
+	b *bot.Bot, filt func(*types.Location) bool,
 	limit int, msg string,
 ) func(ctx *route.Ctx) error {
 	return func(ctx *route.Ctx) error {
@@ -43,7 +44,7 @@ func cleanQueries(qs []string) []string {
 // Search performs fuzzy searching on Locations.
 func Search(
 	d *db.DB, ctx *route.Ctx, admin bool,
-	filt func(*Location) bool, limit int, msg string,
+	filt func(*types.Location) bool, limit int, msg string,
 ) error {
 	err := ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 	if err != nil {
@@ -71,7 +72,7 @@ func Search(
 		return rep.Send()
 	}
 
-	locs, err := GetLocations(ctx, d)
+	locs, err := types.GetLocations(ctx, d)
 	if err != nil {
 		err = fmt.Errorf("get locs: %w", err)
 		warn.Println(err)
@@ -105,7 +106,7 @@ func addField(e *dg.MessageEmbed, name, value string) {
 }
 
 func searchQuery(
-	ctx *route.Ctx, query string, locations []*Location,
+	ctx *route.Ctx, query string, locations []*types.Location,
 	limit int, _debug bool, msg string,
 ) {
 	pss := search(clean(query), locations, 50, limit)
@@ -185,4 +186,22 @@ func debugEmbed(e *dg.MessageEmbed, ps *locationScore) {
 	addField(e, "Score", fmt.Sprintf("%d%%", ps.Score))
 
 	addField(e, "Link", ps.URL())
+}
+
+func nick(m *dg.Message) string {
+	if m.Member != nil {
+		if m.Member.Nick != "" {
+			return m.Member.Nick
+		}
+
+		if m.Member.User != nil {
+			return m.Member.User.Username
+		}
+	}
+
+	if m.Author != nil {
+		return m.Author.Username
+	}
+
+	return "NAME UNKNOWN"
 }

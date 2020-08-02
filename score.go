@@ -6,15 +6,23 @@ import (
 	"strings"
 
 	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
+	"github.com/superloach/mapper/types"
 )
 
 type locationScore struct {
-	*Location
+	*types.Location
 	Score int
 }
 
 func (l *locationScore) String() string {
 	return fmt.Sprintf("%q:%d", l.Location.Name, l.Score)
+}
+
+func (l *locationScore) URL() string {
+	return MapURL(fmt.Sprintf(
+		"%.6f,%.6f",
+		l.Value.Lat, l.Value.Lng,
+	))
 }
 
 func words(s1, s2 string) int {
@@ -39,10 +47,10 @@ func scorer(s1, s2 string) int {
 		1*words(s1, s2)) / 6
 }
 
-func scoreLocation(q string, p *Location) *locationScore {
+func scoreLocation(q string, p *types.Location) *locationScore {
 	names := append([]string{p.Name}, p.Aliases...)
 
-	ps := &locationScore{
+	ls := &locationScore{
 		Location: p,
 		Score:    0,
 	}
@@ -50,31 +58,31 @@ func scoreLocation(q string, p *Location) *locationScore {
 	for _, name := range names {
 		s := scorer(q, clean(name))
 
-		if s > ps.Score {
-			ps.Score = s
+		if s > ls.Score {
+			ls.Score = s
 		}
 	}
 
-	return ps
+	return ls
 }
 
-func search(q string, ps []*Location, min, num int) []*locationScore {
-	pss := make([]*locationScore, len(ps))
-	for i, p := range ps {
-		pss[i] = scoreLocation(q, p)
+func search(q string, ls []*types.Location, min, num int) []*locationScore {
+	lss := make([]*locationScore, len(ls))
+	for i, p := range ls {
+		lss[i] = scoreLocation(q, p)
 	}
 
-	sort.Slice(pss, func(i, j int) bool {
-		return pss[i].Score > pss[j].Score
+	sort.Slice(lss, func(i, j int) bool {
+		return lss[i].Score > lss[j].Score
 	})
 
-	for i, ps := range pss {
-		if ps.Score < min || i >= num {
-			return pss[:i]
+	for i, ls := range lss {
+		if ls.Score < min || i >= num {
+			return lss[:i]
 		}
 	}
 
-	return pss
+	return lss
 }
 
 func clean(s string) string {
