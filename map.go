@@ -1,4 +1,4 @@
-package mapper
+package main
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	dg "github.com/bwmarrin/discordgo"
-
+	"github.com/go-snart/snart/log"
 	"github.com/go-snart/snart/route"
 )
 
@@ -44,7 +44,7 @@ func Map(ctx *route.Ctx) error {
 		err := ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 		if err != nil {
 			err = fmt.Errorf("typing %q: %w", ctx.Message.ChannelID, err)
-			warn.Println(_f, err)
+			log.Warn.Println(_f, err)
 		}
 
 		rep := ctx.Reply()
@@ -61,7 +61,7 @@ func Map(ctx *route.Ctx) error {
 
 		err = rep.Send()
 		if err != nil {
-			warn.Println(_f, err)
+			log.Warn.Println(_f, err)
 		}
 	}
 

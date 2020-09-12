@@ -1,4 +1,4 @@
-package mapper
+package main
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
+
 	"github.com/superloach/mapper/types"
 )
 

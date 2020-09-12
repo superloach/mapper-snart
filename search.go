@@ -1,26 +1,25 @@
-package mapper
+package main
 
 import (
 	"fmt"
 	"strings"
 
 	dg "github.com/bwmarrin/discordgo"
-	"github.com/superloach/mapper/types"
-
-	"github.com/go-snart/snart/bot"
 	"github.com/go-snart/snart/db"
-	"github.com/go-snart/snart/db/admin"
+	"github.com/go-snart/snart/log"
 	"github.com/go-snart/snart/route"
+
+	"github.com/superloach/mapper/types"
 )
 
 // Searcher is a wrapper that creates a function suitable for route.
-func Searcher(
-	b *bot.Bot, filt func(*types.Location) bool,
+func (m *Mapper) Searcher(
+	filt func(*types.Location) bool,
 	limit int, msg string,
 ) func(ctx *route.Ctx) error {
 	return func(ctx *route.Ctx) error {
 		return Search(
-			b.DB, ctx, admin.IsAdmin(b.DB)(ctx),
+			m.DB, ctx, route.BotAdmin(m.DB)(ctx),
 			filt, limit, msg,
 		)
 	}
@@ -49,7 +48,7 @@ func Search(
 	err := ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 	if err != nil {
 		err = fmt.Errorf("typing %q: %w", ctx.Message.ChannelID, err)
-		warn.Println(err)
+		log.Warn.Println(err)
 	}
 
 	debug := false
@@ -72,10 +71,10 @@ func Search(
 		return rep.Send()
 	}
 
-	locs, err := types.GetLocations(ctx, d)
+	locs, err := types.GetLocations(d)
 	if err != nil {
 		err = fmt.Errorf("get locs: %w", err)
-		warn.Println(err)
+		log.Warn.Println(err)
 
 		return err
 	}
@@ -84,7 +83,7 @@ func Search(
 		err = ctx.Session.ChannelTyping(ctx.Message.ChannelID)
 		if err != nil {
 			err = fmt.Errorf("typing %q: %w", ctx.Message.ChannelID, err)
-			warn.Println(err)
+			log.Warn.Println(err)
 		}
 
 		searchQuery(
@@ -116,7 +115,7 @@ func searchQuery(
 	pg.Add(firstEmbed(len(pss), msg, nick(ctx.Message)))
 
 	for i, ps := range pss {
-		debug.Println(ps)
+		log.Debug.Println(ps)
 
 		e := mkEmbed(ps, i, len(pss), msg, nick(ctx.Message))
 

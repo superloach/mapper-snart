@@ -1,4 +1,4 @@
-package mapper
+package main
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 
 	dgw "github.com/Necroforger/dgwidgets"
 	dg "github.com/bwmarrin/discordgo"
+	"github.com/go-snart/snart/log"
 )
 
 var (
@@ -62,7 +63,7 @@ func (w *Widget) Spawn() {
 	err := w.Widget.Handle(EmoteLeft, w.PreviousPage)
 	if err != nil {
 		err = fmt.Errorf("handle left: %w", err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 
 		return
 	}
@@ -70,7 +71,7 @@ func (w *Widget) Spawn() {
 	err = w.Widget.Handle(EmoteRight, w.NextPage)
 	if err != nil {
 		err = fmt.Errorf("handle right: %w", err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 
 		return
 	}
@@ -78,7 +79,7 @@ func (w *Widget) Spawn() {
 	err = w.Widget.Handle(EmoteConfirm, w.Close)
 	if err != nil {
 		err = fmt.Errorf("handle confirm: %w", err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 
 		return
 	}
@@ -86,7 +87,7 @@ func (w *Widget) Spawn() {
 	page, err := w.Page()
 	if err != nil {
 		err = fmt.Errorf("page: %w", err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 
 		return
 	}
@@ -99,7 +100,7 @@ func (w *Widget) Spawn() {
 	err = w.Widget.Spawn()
 	if err != nil {
 		err = fmt.Errorf("widget spawn: %w", err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 	}
 }
 
@@ -136,7 +137,7 @@ func (w *Widget) NextPage(_ *dgw.Widget, r *dg.MessageReaction) {
 	err := w.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 
 		return
 	}
@@ -155,7 +156,7 @@ func (w *Widget) PreviousPage(_ *dgw.Widget, r *dg.MessageReaction) {
 	err := w.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 
 		return
 	}
@@ -168,7 +169,7 @@ func (w *Widget) Close(_ *dgw.Widget, r *dg.MessageReaction) {
 	page, err := w.Page()
 	if err != nil {
 		err = fmt.Errorf("page: %w", err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 
 		return
 	}
@@ -178,7 +179,7 @@ func (w *Widget) Close(_ *dgw.Widget, r *dg.MessageReaction) {
 	err = w.Update()
 	if err != nil {
 		err = fmt.Errorf("update: %w", err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 
 		return
 	}
@@ -186,7 +187,7 @@ func (w *Widget) Close(_ *dgw.Widget, r *dg.MessageReaction) {
 	err = w.Ses.MessageReactionsRemoveAll(w.Widget.ChannelID, w.Widget.Message.ID)
 	if err != nil {
 		err = fmt.Errorf("remove reacts %q %q: %w", w.Widget.ChannelID, w.Widget.Message.ID, err)
-		warn.Println(_f, err)
+		log.Warn.Println(_f, err)
 
 		return
 	}
